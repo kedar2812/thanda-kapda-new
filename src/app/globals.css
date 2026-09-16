@@ -1,0 +1,373 @@
+@import "tailwindcss";
+@import "lenis/dist/lenis.css";
+
+/* ------------------------------------------------------------------
+   Design tokens
+   Parchment cream, deep forest green, antique gold. Two families:
+   Fraunces (display serif) and Hanken Grotesk (text sans).
+------------------------------------------------------------------- */
+@theme {
+  --color-cream: #f4ecdc;
+  --color-cream-50: #faf6ec;
+  --color-cream-200: #ece1c9;
+  --color-sand: #dfd1b4;
+  --color-sand-deep: #cbbb98;
+
+  --color-forest: #143829;
+  --color-forest-deep: #0c2419;
+  --color-forest-soft: #275641;
+  --color-moss: #6f7c5e;
+  --color-sage: #b6bea6;
+
+  --color-gold: #b3823a;
+  --color-gold-light: #d9b06a;
+  --color-ink: #1d1a16;
+  --color-clay: #b7552c;
+
+  --font-display: var(--font-fraunces), "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --font-sans: var(--font-hanken), "Helvetica Neue", Arial, sans-serif;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
+
+  --breakpoint-xs: 30rem;
+  --breakpoint-3xl: 110rem;
+
+  --shadow-paper: 0 1px 2px rgb(29 26 22 / 0.06), 0 12px 32px -12px rgb(29 26 22 / 0.28);
+  --shadow-lift: 0 2px 4px rgb(29 26 22 / 0.08), 0 28px 60px -24px rgb(29 26 22 / 0.4);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: auto;
+  }
+
+  body {
+    background-color: var(--color-cream);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 1.0625rem;
+    line-height: 1.6;
+    font-feature-settings: "kern", "liga", "calt";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: clip;
+  }
+
+  ::selection {
+    background: var(--color-forest);
+    color: var(--color-cream);
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+    font-variation-settings: "SOFT" 40, "WONK" 0;
+    font-optical-sizing: auto;
+    letter-spacing: -0.012em;
+    line-height: 1.02;
+    font-weight: 400;
+    text-wrap: balance;
+  }
+
+  em, .italic, .font-display i {
+    font-variation-settings: "SOFT" 80, "WONK" 1;
+  }
+
+  img, svg, video {
+    display: block;
+    max-width: 100%;
+  }
+
+  img {
+    height: auto;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  /* Hide animated elements until JS is ready so nothing flashes before the
+     reveal. If JS never runs, the html.js class is absent and all content shows. */
+  html.js [data-split]:not([data-split-ready]) {
+    visibility: hidden;
+  }
+
+  html.js [data-reveal]:not([data-reveal-ready]) {
+    opacity: 0;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Typography helpers
+------------------------------------------------------------------- */
+@utility eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  line-height: 1;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+@utility display-1 {
+  font-size: clamp(2.9rem, 8.6vw, 8.25rem);
+  line-height: 0.94;
+  letter-spacing: -0.028em;
+}
+
+@utility display-2 {
+  font-size: clamp(2.35rem, 5.4vw, 5.25rem);
+  line-height: 0.98;
+  letter-spacing: -0.022em;
+}
+
+@utility display-3 {
+  font-size: clamp(1.85rem, 3.2vw, 3.1rem);
+  line-height: 1.05;
+  letter-spacing: -0.016em;
+}
+
+@utility lede {
+  font-size: clamp(1.0625rem, 1.25vw, 1.25rem);
+  line-height: 1.55;
+}
+
+@utility script {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-variation-settings: "SOFT" 100, "WONK" 1;
+  letter-spacing: -0.01em;
+}
+
+@utility container-wide {
+  width: 100%;
+  margin-inline: auto;
+  padding-inline: clamp(1.25rem, 4vw, 4rem);
+  max-width: 100rem;
+}
+
+@utility container-text {
+  width: 100%;
+  margin-inline: auto;
+  padding-inline: clamp(1.25rem, 4vw, 4rem);
+  max-width: 68rem;
+}
+
+/* ------------------------------------------------------------------
+   Surfaces
+------------------------------------------------------------------- */
+@layer components {
+  /* Paper grain overlay: one fixed layer, static SVG noise. */
+  .grain {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    pointer-events: none;
+    opacity: 0.055;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    background-size: 220px 220px;
+  }
+
+  /* Soft vignette that gives the cream a printed, aged feel. */
+  .parchment {
+    background-color: var(--color-cream);
+    background-image:
+      radial-gradient(120% 80% at 50% 0%, rgb(255 251 240 / 0.7), transparent 60%),
+      radial-gradient(90% 70% at 100% 100%, rgb(203 187 152 / 0.28), transparent 60%),
+      radial-gradient(80% 60% at 0% 100%, rgb(203 187 152 / 0.22), transparent 60%);
+  }
+
+  .parchment-dark {
+    background-color: var(--color-forest);
+    background-image:
+      radial-gradient(100% 70% at 20% 0%, rgb(39 86 65 / 0.55), transparent 60%),
+      radial-gradient(80% 60% at 100% 100%, rgb(12 36 25 / 0.9), transparent 60%);
+  }
+
+  /* Hairline rules in the brand palette */
+  .rule {
+    height: 1px;
+    background: color-mix(in srgb, var(--color-ink) 16%, transparent);
+  }
+
+  .rule-gold {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--color-gold) 20%, var(--color-gold) 80%, transparent);
+  }
+
+  /* Framed photo with washi tape */
+  .polaroid {
+    background: #fbf8f1;
+    padding: 0.6rem 0.6rem 0.9rem;
+    box-shadow: var(--shadow-paper);
+    border-radius: 2px;
+  }
+
+  .tape {
+    position: absolute;
+    width: 5.2rem;
+    height: 1.35rem;
+    background: rgb(236 225 201 / 0.86);
+    box-shadow: 0 1px 1px rgb(29 26 22 / 0.12);
+    -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 24' preserveAspectRatio='none'><path d='M3 0h94l3 6-2 6 2 6-3 6H3l-3-6 2-6-2-6z'/></svg>");
+    mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 24' preserveAspectRatio='none'><path d='M3 0h94l3 6-2 6 2 6-3 6H3l-3-6 2-6-2-6z'/></svg>");
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+  }
+
+  /* Product photos are shot on white; multiply drops the white onto cream. */
+  .blend-paper {
+    mix-blend-mode: multiply;
+  }
+
+  /* Marquee */
+  .marquee {
+    display: flex;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  }
+
+  .marquee-track {
+    display: flex;
+    flex: none;
+    width: max-content;
+    animation: marquee var(--marquee-duration, 46s) linear infinite;
+    will-change: transform;
+  }
+
+  .marquee:hover .marquee-track {
+    animation-play-state: paused;
+  }
+
+  /* Rotating stamp */
+  .spin-slow {
+    animation: spin 26s linear infinite;
+  }
+
+  /* Underline that draws in from the left */
+  .link-line {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-size: 0% 1px;
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    transition: background-size 0.5s var(--ease-out-expo);
+  }
+
+  .link-line:hover,
+  .group:hover .link-line {
+    background-size: 100% 1px;
+  }
+
+  /* Aged map paper: warm base, soft tea stains and a darker rim. */
+  .paper-aged {
+    background-color: #eee2c8;
+    background-image:
+      radial-gradient(ellipse at 50% 45%, transparent 55%, rgb(120 88 40 / 0.16) 100%),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='900' height='900'><filter id='s'><feTurbulence type='fractalNoise' baseFrequency='0.006' numOctaves='3' seed='11' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.5  0 0 0 0 0.37  0 0 0 0 0.16  0.75 0 0 0 -0.34'/></filter><rect width='100%' height='100%' filter='url(%23s)'/></svg>"),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='f'><feTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.35  0 0 0 0 0.26  0 0 0 0 0.12  0 0 0 0.12 0'/></filter><rect width='100%' height='100%' filter='url(%23f)'/></svg>");
+    background-size: 100% 100%, 900px 900px, 240px 240px;
+    box-shadow: inset 0 0 0 1px rgb(120 88 40 / 0.14), inset 0 0 60px rgb(120 88 40 / 0.12);
+  }
+
+  /* Centre crease of a two-page spread. */
+  .fold {
+    background-image: linear-gradient(90deg, transparent 47%, rgb(60 40 10 / 0.07) 49.6%, rgb(255 250 235 / 0.25) 50.2%, transparent 53%);
+  }
+
+  /* Double hairline frame used on the dark collateral panels. */
+  .frame-double {
+    position: relative;
+  }
+
+  .frame-double::before,
+  .frame-double::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    border-radius: inherit;
+  }
+
+  .frame-double::before {
+    inset: 0.75rem;
+    border: 1px solid rgb(217 176 106 / 0.45);
+  }
+
+  .frame-double::after {
+    inset: 1.1rem;
+    border: 1px solid rgb(217 176 106 / 0.18);
+  }
+
+  /* SplitText masks clip at the line box; give descenders room and take
+     the same space back so the rhythm of the paragraph is unchanged. */
+  [data-split] .split-line {
+    padding: 0.06em 0 0.16em;
+  }
+
+  [data-split] > * {
+    margin-top: -0.06em;
+    margin-bottom: -0.16em;
+  }
+
+  /* Torn strip between sections */
+  .torn-strip {
+    height: clamp(1.25rem, 2.6vw, 2.5rem);
+  }
+
+  /* Image frame used across sections */
+  .frame {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.375rem;
+    background: var(--color-sand);
+  }
+
+  .frame > img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+@keyframes marquee {
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(var(--r, 0deg));
+  }
+  50% {
+    transform: translate3d(0, -10px, 0) rotate(var(--r, 0deg));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track,
+  .spin-slow {
+    animation: none;
+  }
+
+  html.js [data-split]:not([data-split-ready]),
+  html.js [data-reveal]:not([data-reveal-ready]) {
+    visibility: visible;
+    opacity: 1;
+  }
+}
