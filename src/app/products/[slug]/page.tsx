@@ -243,11 +243,11 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
           <span className="tape -top-2 left-12 rotate-[-6deg]" aria-hidden />
           <div className="relative aspect-[16/7] overflow-hidden rounded-sm">
             <Image
-              src={product.slug === "namaste" ? "/products/namaste-classroom.jpg" : "/products/morning-spring-sachet.jpg"}
-              alt={product.slug === "namaste" ? "Namasté sachet on a school desk" : "A single Morning Spring sachet"}
+              src={product.slug === "namaste" ? "/products/namaste-classroom.jpg" : "/products/morning-spring-plate.jpg"}
+              alt={product.slug === "namaste" ? "Namasté sachet on a school desk" : "Morning Spring sachets on a ceramic plate beside an olive sprig"}
               fill
               sizes="(min-width: 1024px) 56rem, 100vw"
-              className="object-cover object-center"
+              className={product.slug === "namaste" ? "object-cover object-center" : "object-cover object-[50%_62%]"}
             />
           </div>
           <p className="script mt-3 text-[1.05rem] text-ink/80">

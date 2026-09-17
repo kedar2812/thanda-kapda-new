@@ -17,8 +17,9 @@ const looks = {
     panel: "bg-[linear-gradient(160deg,#e6ead8_0%,#dfe4cd_45%,#eee6d2_100%)]",
     subtitle: "Pure freshness from nature",
     note: "For heat, travel and the long day out.",
-    image: "/products/morning-spring-sachet.jpg",
-    alt: "Morning Spring sachet, front",
+    image: "/products/morning-spring-plate.jpg",
+    alt: "Morning Spring sachets on a ceramic plate",
+    scene: { src: "/products/morning-spring-table.jpg", alt: "Morning Spring sachet laid on a wedding table beside cutlery and candles" },
     aspect: "aspect-[3/2]",
   },
   namaste: {
@@ -27,6 +28,7 @@ const looks = {
     note: "For the end of a memorable meal.",
     image: "/products/namaste-marble.jpg",
     alt: "Namasté sachet on a marble counter",
+    scene: { src: "/products/namaste-plate.jpg", alt: "Three Namasté sachets fanned on a ceramic plate on a café table" },
     aspect: "aspect-[3/2]",
   },
 } as const;
@@ -144,7 +146,7 @@ export function Collection() {
                     </div>
                     <div className="relative mt-4 hidden overflow-hidden rounded-sm md:block">
                       <div className="relative aspect-[16/10]">
-                        <Image src={p.hero.src} alt={p.hero.alt} fill sizes="(min-width: 1024px) 24vw, 45vw" className="object-cover" />
+                        <Image src={look.scene.src} alt={look.scene.alt} fill sizes="(min-width: 1024px) 24vw, 45vw" className="object-cover" />
                       </div>
                     </div>
                   </div>

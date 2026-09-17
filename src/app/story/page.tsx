@@ -172,7 +172,7 @@ export default function StoryPage() {
               </Stamp>
               <Postage className="w-24 rotate-[6deg]">
                 <div className="relative aspect-[4/5] overflow-hidden">
-                  <Image src="/products/morning-spring-sachet.jpg" alt="" fill sizes="96px" className="object-cover" />
+                  <Image src="/products/morning-spring-plate.jpg" alt="" fill sizes="96px" className="object-cover object-[58%_60%]" />
                 </div>
               </Postage>
             </Reveal>

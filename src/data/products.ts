@@ -77,16 +77,16 @@ export const products: Product[] = [
     amazonUrl: "https://www.amazon.in/dp/B0G1KN6Y55",
     rating: { value: 5.0, count: 27 },
     packshot: {
-      src: "/products/morning-spring-sachet.jpg",
-      alt: "Morning Spring single sachet with a printed mountain valley illustration",
-      width: 1500,
-      height: 1000,
+      src: "/products/morning-spring-plate.jpg",
+      alt: "Two Morning Spring sachets resting on a speckled ceramic plate in warm afternoon light",
+      width: 1374,
+      height: 1030,
     },
     hero: {
-      src: "/products/morning-spring-table.jpg",
-      alt: "Morning Spring sachet laid on a wedding table beside cutlery and candles",
-      width: 1500,
-      height: 1000,
+      src: "/products/morning-spring-plate.jpg",
+      alt: "Two Morning Spring sachets resting on a speckled ceramic plate in warm afternoon light",
+      width: 1374,
+      height: 1030,
     },
     gallery: [
       {
@@ -96,8 +96,8 @@ export const products: Product[] = [
         height: 853,
       },
       {
-        src: "/products/morning-spring-sachet.jpg",
-        alt: "A single Morning Spring sachet, front",
+        src: "/products/morning-spring-table.jpg",
+        alt: "Morning Spring sachet laid on a wedding table beside cutlery and candles",
         width: 1500,
         height: 1000,
       },
