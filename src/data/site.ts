@@ -12,6 +12,12 @@ export const site = {
   instagram: "https://www.instagram.com/thandakapda.co",
   instagramHandle: "@thandakapda.co",
   amazonStore: "https://www.amazon.in/s?k=thanda+kapda",
+  /** Fill rating and count from the Google Business Profile; the badge hides the score until both are set. */
+  googleReviews: {
+    url: "https://www.google.com/search?q=Thanda+Kapda+Co.+reviews",
+    rating: null as number | null,
+    count: null as number | null,
+  },
   established: "2025",
   origin: "Made in India",
 };
