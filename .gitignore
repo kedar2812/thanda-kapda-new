@@ -39,3 +39,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Dashboard
+/admin/dist
+/admin/api/config.php
+/admin/api/config.production.php
+/admin/web/node_modules
+
+# Credentials — never commit
+thanda_kapda_co_details_IMP.txt
+.deploy.env
+.deploy/

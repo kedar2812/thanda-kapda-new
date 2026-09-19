@@ -1,0 +1,187 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Semantic tokens. Components only use these, so light/dark is one switch. */
+:root {
+  --bg: #f2f2f7;            /* grouped background */
+  --surface: #ffffff;       /* cards, rows */
+  --surface-2: #f7f7fa;     /* inset wells, inputs */
+  --elevated: #ffffff;      /* sheets */
+  --fill: rgba(118, 118, 128, 0.12);
+  --fill-strong: rgba(118, 118, 128, 0.2);
+  --separator: rgba(60, 60, 67, 0.14);
+  --label: #111113;
+  --label-2: rgba(60, 60, 67, 0.72);
+  --label-3: rgba(60, 60, 67, 0.46);
+  --accent: #1f6b4a;        /* Thanda Kapda forest, brightened for UI */
+  --accent-press: #185a3d;
+  --accent-soft: rgba(31, 107, 74, 0.1);
+  --on-accent: #ffffff;
+  --gold: #a8742c;
+  --gold-soft: rgba(179, 130, 58, 0.14);
+  --red: #d7362b;
+  --red-soft: rgba(215, 54, 43, 0.1);
+  --orange: #c26a0a;
+  --orange-soft: rgba(194, 106, 10, 0.12);
+  --green: #1f8a4c;
+  --green-soft: rgba(31, 138, 76, 0.12);
+  --chrome: rgba(249, 249, 251, 0.78);  /* translucent bars */
+  --scrim: rgba(0, 0, 0, 0.32);
+  /* Chart series, validated for colour-blind separation on this surface. */
+  --series-1: #0f8a52;
+  --series-2: #5a63d8;
+  --shadow-card: 0 0.5px 0 rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sheet: 0 -1px 0 rgba(0, 0, 0, 0.04), 0 24px 64px -12px rgba(0, 0, 0, 0.3);
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --bg: #000000;
+  --surface: #1c1c1e;
+  --surface-2: #2c2c2e;
+  --elevated: #1c1c1e;
+  --fill: rgba(118, 118, 128, 0.24);
+  --fill-strong: rgba(118, 118, 128, 0.36);
+  --separator: rgba(84, 84, 88, 0.5);
+  --label: #f5f5f7;
+  --label-2: rgba(235, 235, 245, 0.66);
+  --label-3: rgba(235, 235, 245, 0.36);
+  --accent: #3fae7c;
+  --accent-press: #359a6c;
+  --accent-soft: rgba(63, 174, 124, 0.16);
+  --on-accent: #04130c;
+  --gold: #d9b06a;
+  --gold-soft: rgba(217, 176, 106, 0.16);
+  --red: #ff6961;
+  --red-soft: rgba(255, 105, 97, 0.14);
+  --orange: #ffb340;
+  --orange-soft: rgba(255, 179, 64, 0.14);
+  --green: #4cd184;
+  --green-soft: rgba(76, 209, 132, 0.14);
+  --chrome: rgba(22, 22, 24, 0.72);
+  --scrim: rgba(0, 0, 0, 0.55);
+  --series-1: #2ea36c;
+  --series-2: #7c86f0;
+  --shadow-card: none;
+  --shadow-sheet: 0 -1px 0 rgba(255, 255, 255, 0.06), 0 24px 64px -12px rgba(0, 0, 0, 0.7);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-elevated: var(--elevated);
+  --color-fill: var(--fill);
+  --color-fill-strong: var(--fill-strong);
+  --color-separator: var(--separator);
+  --color-label: var(--label);
+  --color-label-2: var(--label-2);
+  --color-label-3: var(--label-3);
+  --color-accent: var(--accent);
+  --color-accent-press: var(--accent-press);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-red: var(--red);
+  --color-red-soft: var(--red-soft);
+  --color-orange: var(--orange);
+  --color-orange-soft: var(--orange-soft);
+  --color-green: var(--green);
+  --color-green-soft: var(--green-soft);
+  --color-chrome: var(--chrome);
+  --color-series-1: var(--series-1);
+  --color-series-2: var(--series-2);
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI Variable Text", "Segoe UI", Roboto, system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI Variable Display", "Segoe UI", Roboto, system-ui, sans-serif;
+  --shadow-card: var(--shadow-card);
+  --shadow-sheet: var(--shadow-sheet);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    background: var(--bg);
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--label);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.45;
+    letter-spacing: -0.006em;
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: "kern", "calt";
+    transition: background-color 240ms ease, color 240ms ease;
+  }
+  /* Tabular figures everywhere numbers line up. */
+  .num {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+  .display {
+    font-family: var(--font-display);
+    letter-spacing: -0.022em;
+    line-height: 1.08;
+  }
+  button, [role="button"] {
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  :focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent);
+    outline-offset: 2px;
+    border-radius: 10px;
+  }
+  input, select, textarea {
+    font: inherit;
+    color: inherit;
+  }
+  /* iOS zooms into inputs under 16px; keep them at 16px on phones. */
+  @media (max-width: 767px) {
+    input, select, textarea { font-size: 16px !important; }
+  }
+}
+
+/* Press feedback on pointer-down, instantly. */
+.pressable {
+  transition: transform 120ms ease-out, background-color 120ms ease-out, opacity 120ms ease-out;
+}
+.pressable:active {
+  transform: scale(0.97);
+}
+.row-press:active {
+  background: var(--fill);
+}
+
+/* Translucent chrome: content scrolls underneath. */
+.chrome {
+  background: var(--chrome);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(22px) saturate(180%);
+}
+
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.safe-top { padding-top: env(safe-area-inset-top); }
+
+.scroll-fade-x {
+  mask-image: linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+@media (prefers-reduced-transparency: reduce) {
+  .chrome { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pressable, .pressable:active { transform: none; transition: opacity 150ms ease; }
+  body { transition: none; }
+}
+@media (prefers-contrast: more) {
+  :root { --separator: rgba(60, 60, 67, 0.5); --label-2: rgba(60, 60, 67, 0.9); }
+}

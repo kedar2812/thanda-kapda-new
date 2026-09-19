@@ -1,0 +1,12 @@
+# Only index.php is reachable; source, schema and config are private.
+Options -Indexes
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^(src(/.*)?|schema\.sql|config\.php|config\.sample\.php|dev-router\.php|tests(/.*)?)$ - [F,L]
+  # /api/<path> → index.php?r=<path>
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^(.*)$ index.php?r=$1 [QSA,L]
+</IfModule>
+<FilesMatch "\.(sql|md|mjs)$">
+  Require all denied
+</FilesMatch>
