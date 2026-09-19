@@ -4,8 +4,9 @@ DirectoryIndex index.html
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
-  # TK_HTTPS_START
-  # TK_HTTPS_END
+  # Always use HTTPS (logins and money data)
+  RewriteCond %{HTTPS} !=on
+  RewriteRule ^ https://admin.thandakapda.co%{REQUEST_URI} [L,R=301]
 
   # API: /api/<path> → api/index.php?r=<path>
   RewriteRule ^api/(.*)$ api/index.php?r=$1 [QSA,L]
