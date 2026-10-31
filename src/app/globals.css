@@ -371,3 +371,17 @@
     opacity: 1;
   }
 }
+
+/* The logo mark, painted in the current text colour. */
+.logo-mark {
+  -webkit-mask: url(/logo-mark.png) center / contain no-repeat;
+  mask: url(/logo-mark.png) center / contain no-repeat;
+  aspect-ratio: 533 / 468;
+}
+
+/* Dashboard preview frame: no entrance animations, everything visible. */
+html.tk-preview [data-split]:not([data-split-ready]),
+html.tk-preview [data-reveal]:not([data-reveal-ready]) {
+  visibility: visible;
+  opacity: 1;
+}

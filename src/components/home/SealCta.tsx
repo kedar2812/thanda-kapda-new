@@ -1,12 +1,13 @@
 "use client";
 
-import Image from "next/image";
 import { useRef } from "react";
 import { gsap, useGSAP, prefersReducedMotion } from "@/lib/gsap";
 import { Seal } from "@/components/ui/Seal";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icons";
-import { site } from "@/data/site";
+import { CmsImage } from "@/components/cms/CmsImage";
+import { SITE_URL, safeUrl, whatsappLink } from "@/content";
+import { useContent } from "@/content/ContentProvider";
 
 /**
  * C23: a parchment card with a gold wax seal, set over a candle-lit table.
@@ -14,6 +15,8 @@ import { site } from "@/data/site";
  */
 export function SealCta() {
   const root = useRef<HTMLElement>(null);
+  const c = useContent();
+  const k = c.home.seal;
 
   useGSAP(
     () => {
@@ -35,51 +38,51 @@ export function SealCta() {
   );
 
   return (
-    <section ref={root} className="relative -mt-[clamp(1.25rem,2.6vw,2.5rem)] overflow-hidden bg-ink" aria-labelledby="seal-title">
+    <section ref={root} data-cms="home.seal" className="relative -mt-[clamp(1.25rem,2.6vw,2.5rem)] overflow-hidden bg-ink" aria-labelledby="seal-title">
       <div data-bg className="absolute inset-0">
-        <Image src="/products/morning-spring-table.jpg" alt="" fill sizes="100vw" className="object-cover" />
+        <CmsImage image={k.background} alt="" sizes="100vw" />
       </div>
       <div aria-hidden className="absolute inset-0 bg-[radial-gradient(70%_70%_at_50%_50%,rgb(12_36_25/0.45),rgb(12_16_10/0.88))]" />
 
       <div className="container-wide relative flex min-h-[90svh] items-center justify-center py-28">
         <div data-card className="relative w-full max-w-xl">
           <div data-seal className="absolute left-1/2 top-0 z-10 w-32 -translate-x-1/2 -translate-y-[58%] sm:w-40">
-            <Seal text="REFRESHING TRADITION · CRAFTED WITH CARE · " />
+            <Seal text={k.seal} />
           </div>
           <div className="paper-aged relative rounded-sm px-7 pb-12 pt-24 text-center shadow-[0_40px_80px_-20px_rgb(0_0_0/0.6)] sm:px-14 sm:pt-28">
             <h2 id="seal-title" data-card-line className="font-display text-[clamp(2rem,4vw,2.9rem)] uppercase leading-none tracking-[0.02em] text-forest">
-              Thanda Kapda Co.
+              {k.title}
             </h2>
             <p data-card-line className="eyebrow mt-4 text-ink/60">
-              Essence of pure indulgence
+              {k.tagline}
             </p>
             <span data-card-line aria-hidden className="mx-auto mt-6 block h-px w-32 bg-gold/60" />
             <ul className="mt-6 space-y-3 font-sans text-[0.8rem] font-semibold uppercase tracking-[0.14em] text-forest">
               <li data-card-line>
-                <a href={site.url} className="link-line">www.thandakapda.co</a>
+                <a href={SITE_URL} className="link-line">{k.website}</a>
               </li>
               <li data-card-line>
-                <a href={site.instagram} target="_blank" rel="noopener noreferrer" className="link-line inline-flex items-center gap-2">
-                  <Icon name="globe" className="h-4 w-4" /> {site.instagramHandle}
+                <a href={safeUrl(c.site.instagram)} target="_blank" rel="noopener noreferrer" className="link-line inline-flex items-center gap-2">
+                  <Icon name="globe" className="h-4 w-4" /> {c.site.instagramHandle}
                 </a>
               </li>
               <li data-card-line>
-                <a href={`https://wa.me/${site.whatsapp}`} target="_blank" rel="noopener noreferrer" className="link-line inline-flex items-center gap-2">
-                  <Icon name="headset" className="h-4 w-4" /> WhatsApp {site.phoneDisplay}
+                <a href={whatsappLink(c)} target="_blank" rel="noopener noreferrer" className="link-line inline-flex items-center gap-2">
+                  <Icon name="headset" className="h-4 w-4" /> WhatsApp {c.site.phoneDisplay}
                 </a>
               </li>
             </ul>
             <div data-card-line className="mt-10 flex flex-wrap justify-center gap-3">
               <Button href="/products" arrow>
-                Shop the wipes
+                {k.primaryCta}
               </Button>
               <Button href="/bulk" variant="outline">
-                Bulk &amp; custom
+                {k.secondaryCta}
               </Button>
             </div>
           </div>
           <div data-strip className="relative -mt-5 ml-auto mr-[-1rem] w-[88%] rotate-[-2deg] bg-forest px-6 py-4 shadow-lift sm:mr-[-2.5rem]">
-            <p className="script text-center text-[1.3rem] text-cream sm:text-[1.5rem]">Let&rsquo;s create unforgettable moments, together.</p>
+            <p className="script text-center text-[1.3rem] text-cream sm:text-[1.5rem]">{k.strip}</p>
           </div>
         </div>
       </div>

@@ -9,17 +9,15 @@ import { Occasions } from "@/components/home/Occasions";
 import { Proof } from "@/components/home/Proof";
 import { BulkCta } from "@/components/home/BulkCta";
 import { SealCta } from "@/components/home/SealCta";
-import { Marquee } from "@/components/ui/Marquee";
-import { claims } from "@/data/site";
+import { ClaimsBand } from "@/components/ClaimsBand";
+import { WorldMap } from "@/components/map/WorldMap";
 
 export default function Home() {
   return (
     <>
       <Hero />
-      <div className="border-y border-ink/10">
-        <Marquee items={claims} />
-      </div>
-      <Journey />
+      <ClaimsBand />
+      <Journey map={<WorldMap />} />
       <Statement />
       <Ritual />
       <Collection />

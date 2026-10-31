@@ -2,7 +2,7 @@
  * A small set of hand-drawn-feeling line icons in the brand's stroke style.
  * All take a className and inherit currentColor.
  */
-import type { SVGProps } from "react";
+import type { ReactElement, SVGProps } from "react";
 
 type P = SVGProps<SVGSVGElement>;
 
@@ -296,12 +296,55 @@ export const Icons = {
       <path d="M10 24l14-4 14 4-14 4z" opacity=".6" />
     </Base>
   ),
+  // Botanical drawings from "What's inside" (drawn on a 64 grid).
+  aloe: (p: P) => (
+    <Base viewBox="0 0 64 64" {...p}>
+      <path d="M32 58C30 40 28 24 32 6c4 18 2 34 0 52Z" />
+      <path d="M30 56C22 44 12 34 8 18c12 8 20 22 22 38Z" />
+      <path d="M34 56c8-12 18-22 22-38-12 8-20 22-22 38Z" />
+      <path d="M26 58C18 52 10 46 6 36c10 4 16 12 20 22Z" />
+      <path d="M38 58c8-6 16-12 20-22-10 4-16 12-20 22Z" />
+    </Base>
+  ),
+  centella: (p: P) => (
+    <Base viewBox="0 0 64 64" {...p}>
+      <path d="M32 60V34" />
+      <path d="M32 34c-14 2-24-8-24-20 14-2 24 8 24 20Z" />
+      <path d="M32 34c14 2 24-8 24-20-14-2-24 8-24 20Z" />
+      <path d="M12 18c8 4 14 8 20 16M52 18c-8 4-14 8-20 16" opacity=".5" />
+    </Base>
+  ),
+  vitaminE: (p: P) => (
+    <Base viewBox="0 0 64 64" {...p}>
+      <path d="M32 6c10 14 18 24 18 34a18 18 0 0 1-36 0c0-10 8-20 18-34Z" />
+      <path d="M22 40a10 10 0 0 0 10 10" opacity=".5" />
+    </Base>
+  ),
+  lemongrass: (p: P) => (
+    <Base viewBox="0 0 64 64" {...p}>
+      <path d="M32 60c-2-22 0-40 4-54" />
+      <path d="M32 60c-8-18-12-32-10-48" />
+      <path d="M32 60c6-18 12-30 20-40" />
+      <path d="M32 60c-14-10-22-22-24-36" opacity=".5" />
+      <path d="M32 60c14-8 20-18 26-30" opacity=".5" />
+    </Base>
+  ),
+  menthol: (p: P) => (
+    <Base viewBox="0 0 64 64" {...p}>
+      <path d="M32 6v52M8 32h48M15 15l34 34M49 15 15 49" />
+      <path d="M32 6l-5 6M32 6l5 6M32 58l-5-6M32 58l5-6M8 32l6-5M8 32l6 5M56 32l-6-5M56 32l-6 5" />
+    </Base>
+  ),
 };
 
 export type IconName = keyof typeof Icons;
 
-export function Icon({ name, className }: { name: IconName; className?: string }) {
-  const C = Icons[name];
+/** Every icon name, for pickers. */
+export const iconNames = Object.keys(Icons) as IconName[];
+
+/** Draws an icon by name. Names come from editable content, so unknown ones fall back to a leaf. */
+export function Icon({ name, className }: { name: IconName | string; className?: string }) {
+  const C = (Icons as Record<string, (p: P) => ReactElement>)[name] ?? Icons.seedling;
   return <C className={className} />;
 }
 
@@ -312,7 +355,7 @@ export function RingIcon({
   tone = "forest",
   size = "md",
 }: {
-  name: IconName;
+  name: IconName | string;
   className?: string;
   tone?: "forest" | "cream" | "gold";
   size?: "sm" | "md" | "lg";

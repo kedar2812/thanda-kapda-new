@@ -1,19 +1,20 @@
 "use client";
 
 import clsx from "clsx";
-import Image from "next/image";
 import { useRef } from "react";
 import { gsap, useGSAP, prefersReducedMotion } from "@/lib/gsap";
+import { CmsImage } from "@/components/cms/CmsImage";
+import type { CmsImage as CmsImageData } from "@/content";
 
 type Props = {
-  src: string;
-  alt: string;
+  image: CmsImageData;
+  /** Overrides the image's alt text, e.g. "" when decorative. */
+  alt?: string;
   className?: string;
   /** 0 = static, 0.2 = pronounced. */
   speed?: number;
   sizes?: string;
   priority?: boolean;
-  quality?: number;
   imgClassName?: string;
 };
 
@@ -22,13 +23,12 @@ type Props = {
  * The inner layer is slightly oversized so the edges never show.
  */
 export function ParallaxImage({
-  src,
+  image,
   alt,
   className,
   speed = 0.12,
   sizes = "(min-width: 1024px) 50vw, 100vw",
   priority,
-  quality = 75,
   imgClassName,
 }: Props) {
   const outer = useRef<HTMLDivElement>(null);
@@ -65,15 +65,7 @@ export function ParallaxImage({
         className="absolute will-change-transform"
         style={{ inset: `-${bleed} 0` }}
       >
-        <Image
-          src={src}
-          alt={alt}
-          fill
-          sizes={sizes}
-          priority={priority}
-          quality={quality}
-          className={clsx("object-cover", imgClassName)}
-        />
+        <CmsImage image={image} alt={alt} sizes={sizes} priority={priority} className={imgClassName} />
       </div>
     </div>
   );

@@ -1,13 +1,15 @@
 import type { NextConfig } from "next";
 
 // The site is hosted as plain files on shared hosting (Apache, no Node.js),
-// so it is built as a static export. Product photos are already web-sized
-// JPEGs, so they are served as-is instead of through the image optimizer.
+// so it is built as a static export. Photos come in several pre-made widths
+// (see src/lib/image-loader.ts); the loader picks one per screen, so there is
+// no image server involved.
 const nextConfig: NextConfig = {
   output: "export",
   trailingSlash: true,
   images: {
-    unoptimized: true,
+    loader: "custom",
+    loaderFile: "./src/lib/image-loader.ts",
   },
 };
 

@@ -15,7 +15,8 @@ function config(): array
 {
     static $cfg = null;
     if ($cfg === null) {
-        $file = __DIR__ . '/../config.php';
+        // TK_CONFIG lets the test suite point a second local server at a scratch database.
+        $file = getenv('TK_CONFIG') ?: __DIR__ . '/../config.php';
         if (!is_file($file)) {
             throw new HttpError(500, 'The dashboard is not configured yet (config.php missing).');
         }
@@ -101,21 +102,7 @@ function send(mixed $payload, int $status = 200): never
 }
 
 // ---------------------------------------------------------------- install
-
-function ensure_installed(): void
-{
-    $exists = scalar("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'settings'");
-    if ((int) $exists > 0) {
-        return;
-    }
-    $sql = file_get_contents(__DIR__ . '/../schema.sql');
-    // Strip comments, then run statement by statement.
-    $sql = preg_replace('/^\s*--.*$/m', '', $sql);
-    foreach (array_filter(array_map('trim', explode(';', $sql))) as $stmt) {
-        db()->exec($stmt);
-    }
-    seed_master_data();
-}
+// (schema upgrades live in migrate.php)
 
 function seed_master_data(): void
 {
@@ -133,6 +120,30 @@ function seed_master_data(): void
         }
     }
     q("INSERT INTO settings (k, v) VALUES ('business_name', 'Thanda Kapda')");
+}
+
+// ---------------------------------------------------------------- places
+
+/** Folder served at /live/: published website content and uploaded photos. */
+function live_dir(): string
+{
+    return rtrim((string) (config()['live_dir'] ?? dirname(__DIR__, 2) . '/live'), '/\\');
+}
+
+/** This dashboard's own address, used to build photo URLs the website can load. */
+function public_base(): string
+{
+    if (!empty(config()['public_url'])) {
+        return rtrim((string) config()['public_url'], '/');
+    }
+    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+    return ($https ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'admin.thandakapda.co');
+}
+
+/** Hosts the public website is served from (for analytics). */
+function site_hosts(): array
+{
+    return config()['site_hosts'] ?? ['thandakapda.co', 'www.thandakapda.co'];
 }
 
 // ---------------------------------------------------------------- auth

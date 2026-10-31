@@ -1,21 +1,9 @@
 import clsx from "clsx";
 import Link from "next/link";
 
-const maskStyle: React.CSSProperties = {
-  WebkitMaskImage: "url(/logo-mark.png)",
-  maskImage: "url(/logo-mark.png)",
-  WebkitMaskSize: "contain",
-  maskSize: "contain",
-  WebkitMaskRepeat: "no-repeat",
-  maskRepeat: "no-repeat",
-  WebkitMaskPosition: "center",
-  maskPosition: "center",
-  aspectRatio: "533 / 468",
-};
-
-/** The folded-cloth-and-droplet mark, recoloured with currentColor. */
+/** The folded-cloth-and-droplet mark, recoloured with currentColor (see .logo-mark in globals.css). */
 export function LogoMark({ className }: { className?: string }) {
-  return <span aria-hidden className={clsx("inline-block bg-current", className)} style={maskStyle} />;
+  return <span aria-hidden className={clsx("logo-mark inline-block bg-current", className)} />;
 }
 
 /** Mark plus the stacked wordmark, exactly as it appears on the sachets. */

@@ -4,7 +4,10 @@ import "./globals.css";
 import { SmoothScroll } from "@/components/SmoothScroll";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
-import { site } from "@/data/site";
+import { Analytics } from "@/components/Analytics";
+import { ADMIN_URL, LIVE_CONTENT_URL, SITE_URL, bakedContent as c, shareImage } from "@/content";
+import { ContentProvider } from "@/content/ContentProvider";
+import { headScript } from "@/content/preview";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -22,12 +25,12 @@ const hanken = Hanken_Grotesk({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(site.url),
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "Thanda Kapda Co. · Aloe wet wipes, alcohol-free and paraben-free",
-    template: "%s · Thanda Kapda Co.",
+    default: c.seo.title,
+    template: `%s · ${c.site.name}`,
   },
-  description: site.description,
+  description: c.site.description,
   keywords: [
     "Thanda Kapda",
     "wet wipes",
@@ -38,18 +41,19 @@ export const metadata: Metadata = {
     "after-meal wipes",
     "custom wet wipes bulk",
   ],
+  alternates: { canonical: "/" },
   openGraph: {
     type: "website",
-    siteName: site.name,
-    title: "Thanda Kapda Co. · A cool cloth for a warm country",
-    description: site.description,
+    siteName: c.site.name,
+    title: c.seo.shareTitle,
+    description: c.site.description,
     locale: "en_IN",
-    images: [{ url: "/products/morning-spring-table.jpg", width: 1500, height: 1000, alt: "Morning Spring sachet on a table" }],
+    images: [shareImage(c.seo.shareImage)],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Thanda Kapda Co.",
-    description: site.description,
+    title: c.site.name,
+    description: c.site.description,
   },
   robots: { index: true, follow: true },
 };
@@ -64,31 +68,36 @@ export const viewport: Viewport = {
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "Organization",
-  name: site.name,
-  url: site.url,
-  description: site.description,
+  name: c.site.name,
+  url: SITE_URL,
+  logo: `${SITE_URL}/icon.png`,
+  description: c.site.description,
   contactPoint: {
     "@type": "ContactPoint",
-    telephone: "+91-91755-40053",
+    telephone: c.site.phone,
     contactType: "customer service",
-    email: site.email,
+    email: c.site.email,
   },
-  sameAs: [site.instagram],
+  sameAs: [c.site.instagram],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${fraunces.variable} ${hanken.variable}`} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }} />
+        <script dangerouslySetInnerHTML={{ __html: headScript(LIVE_CONTENT_URL) }} />
+        <link rel="preconnect" href={ADMIN_URL} crossOrigin="anonymous" />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       </head>
       <body className="parchment min-h-dvh">
         <SmoothScroll>
-          <Nav />
-          <main id="main">{children}</main>
-          <Footer />
+          <ContentProvider>
+            <Nav />
+            <main id="main">{children}</main>
+            <Footer />
+          </ContentProvider>
         </SmoothScroll>
+        <Analytics />
         <div className="grain" aria-hidden />
       </body>
     </html>

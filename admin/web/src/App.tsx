@@ -20,6 +20,9 @@ const Samples = lazy(() => import('@/pages/Samples'))
 const Gst = lazy(() => import('@/pages/Gst'))
 const ActivityPage = lazy(() => import('@/pages/Activity'))
 const Settings = lazy(() => import('@/pages/Settings'))
+const Website = lazy(() => import('@/pages/Website'))
+const Photos = lazy(() => import('@/pages/Photos'))
+const Analytics = lazy(() => import('@/pages/Analytics'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -87,6 +90,9 @@ function Authed() {
           <Route path="gst" element={<Lazy><Gst /></Lazy>} />
           <Route path="activity" element={<Lazy><ActivityPage /></Lazy>} />
           <Route path="settings" element={<Lazy><Settings /></Lazy>} />
+          <Route path="website" element={<Lazy><Website /></Lazy>} />
+          <Route path="website/photos" element={<Lazy><Photos /></Lazy>} />
+          <Route path="analytics" element={<Lazy><Analytics /></Lazy>} />
           <Route path="more" element={<MorePage />} />
           <Route path="*" element={<Lazy><Overview /></Lazy>} />
         </Route>

@@ -11,6 +11,9 @@ DirectoryIndex index.html
   # API: /api/<path> → api/index.php?r=<path>
   RewriteRule ^api/(.*)$ api/index.php?r=$1 [QSA,L]
 
+  # Website content and photos: a missing file is a real 404, never the app.
+  RewriteRule ^live/ - [L]
+
   # Everything else that isn't a real file is a dashboard screen.
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d

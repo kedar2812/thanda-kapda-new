@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Archive, Boxes, Download, MapPin, Moon, RotateCcw, Tags, Upload, UserRound, Wallet, type LucideIcon } from 'lucide-react'
+import { Archive, BarChart3, Boxes, Download, HardDrive, MapPin, Moon, RotateCcw, Tags, Upload, UserRound, Wallet, type LucideIcon } from 'lucide-react'
 import { Page } from '@/components/Layout'
 import { Sheet } from '@/components/Sheet'
 import { DeleteButton, Editor, FormError, downloadBlob } from '@/components/common'
@@ -11,6 +11,7 @@ import { qty, todayISO } from '@/lib/format'
 import { toValues, useRecordForm } from '@/lib/form'
 import { applyTheme, type ThemePref } from '@/lib/theme'
 import type { Master, MasterTable } from '@/lib/types'
+import { SITE_URL } from '@/lib/content'
 
 const LISTS: { table: MasterTable; title: string; one: string; icon: LucideIcon; hint: string }[] = [
   { table: 'designs', title: 'Designs', one: 'design', icon: Boxes, hint: 'Print and packaging variants' },
@@ -90,6 +91,7 @@ export default function Settings() {
               <ListRow key={l.table} list={l} onClick={() => setList(l)} />
             ))}
           </Group>
+          <WebsiteSettings />
           <Group title="Appearance">
             <div className="flex items-center gap-3 px-4 py-3">
               <Moon className="size-5 text-label-2" />
@@ -187,9 +189,13 @@ function ArchivedRow({ table, item }: { table: MasterTable; item: Master }) {
           type="button"
           className="pressable inline-flex items-center gap-1 text-[0.875rem] font-medium text-accent"
           onClick={async () => {
-            await post(`${table}/${item.id}/restore`)
-            await qc.invalidateQueries()
-            toast(`${item.name} restored`)
+            try {
+              await post(`${table}/${item.id}/restore`)
+              await qc.invalidateQueries()
+              toast(`${item.name} restored`)
+            } catch (e) {
+              toast(e instanceof Error ? e.message : 'Could not restore', 'error')
+            }
           }}
         >
           <RotateCcw className="size-3.5" /> Restore
@@ -311,5 +317,40 @@ function UserForm({ user, open, myId, onDone }: { user: TeamUser | null; open: b
         )}
       </div>
     </Sheet>
+  )
+}
+
+// ---------------------------------------------------------------- website
+
+interface Storage { writable: boolean; content_url: string; upload_limit: string; post_limit: string; php: string }
+
+/** Whether the server can publish website changes, and the analytics opt-out. */
+function WebsiteSettings() {
+  const { data, isLoading } = useQuery({ queryKey: ['storage'], queryFn: () => get<Storage>('storage') })
+  return (
+    <Group
+      title="Website"
+      footer={
+        data && !data.writable
+          ? 'The dashboard can’t write to its “live” folder, so publishing and photo uploads won’t work. Ask your host to give the website’s PHP permission to write to the “live” folder of admin.thandakapda.co.'
+          : 'Open the link once on each phone or computer you use, so your own visits don’t count.'
+      }
+    >
+      <Row
+        leading={<HardDrive className={cx('size-5', data && !data.writable ? 'text-red' : 'text-accent')} />}
+        title="Website storage"
+        subtitle={isLoading ? 'Checking…' : data ? `Uploads up to ${data.upload_limit} per file · PHP ${data.php}` : 'Could not check'}
+        trailing={data ? (data.writable ? <Badge tone="green">Working</Badge> : <Badge tone="red">Not writable</Badge>) : undefined}
+      />
+      <a href={`${SITE_URL}/?tk-ignore=1`} target="_blank" rel="noreferrer" className="row-press group flex w-full items-center gap-3 pl-4 text-left">
+        <BarChart3 className="size-5 text-accent" />
+        <span className="flex min-h-[3.25rem] min-w-0 flex-1 items-center border-b border-separator py-2.5 pr-4 group-last:border-b-0">
+          <span className="min-w-0 flex-1">
+            <span className="block text-[0.9375rem]">Don’t count my visits</span>
+            <span className="block truncate text-[0.8125rem] text-label-2">Leaves this browser out of the visitor numbers</span>
+          </span>
+        </span>
+      </a>
+    </Group>
   )
 }

@@ -47,7 +47,8 @@ function tearPath(side: Side, seed: number, amplitude = 0.028, segments = 72) {
         x = t;
         y = 1000 - o;
     }
-    edge.push(`${x.toFixed(1)} ${y.toFixed(1)}`);
+    // Whole units: the box is 1000 wide, so this is far below a pixel.
+    edge.push(`${Math.round(x)} ${Math.round(y)}`);
   }
   const corners: Record<Side, string> = {
     left: "L1000 1000 L1000 0",
@@ -61,15 +62,13 @@ function tearPath(side: Side, seed: number, amplitude = 0.028, segments = 72) {
 function maskUrl(side: Side, seed: number, amplitude?: number) {
   const d = tearPath(side, seed, amplitude);
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 1000' preserveAspectRatio='none'><path d='${d}'/></svg>`;
-  return `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
+  // Escape only what a quoted CSS data URL needs; spaces and digits stay as they are.
+  return `url("data:image/svg+xml,${svg.replace(/[<>#%"]/g, (ch) => `%${ch.charCodeAt(0).toString(16).toUpperCase()}`)}")`;
 }
 
 const maskProps = (url: string): React.CSSProperties => ({
-  WebkitMaskImage: url,
   maskImage: url,
-  WebkitMaskSize: "100% 100%",
   maskSize: "100% 100%",
-  WebkitMaskRepeat: "no-repeat",
   maskRepeat: "no-repeat",
 });
 

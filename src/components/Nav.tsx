@@ -5,7 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { gsap, useGSAP, ScrollTrigger } from "@/lib/gsap";
-import { nav, site } from "@/data/site";
+import { safeUrl, whatsappLink, type SiteContent } from "@/content";
+import { useContent } from "@/content/ContentProvider";
 import { Logo, LogoMark } from "@/components/ui/Logo";
 import { LeafSprig } from "@/components/ui/Ornaments";
 
@@ -17,12 +18,25 @@ function WhatsAppGlyph({ className }: { className?: string }) {
   );
 }
 
+/** The primary navigation, labelled from content. */
+export function navItems(c: SiteContent) {
+  const n = c.site.nav;
+  return [
+    { href: "/products", label: n.products },
+    { href: "/story", label: n.story },
+    { href: "/bulk", label: n.bulk },
+    { href: "/contact", label: n.contact },
+  ];
+}
+
 /**
  * Always-visible header. Transparent over the hero, then a compact parchment
  * bar with a hairline once the page scrolls. A thin gold line at the very top
  * shows reading progress.
  */
 export function Nav() {
+  const c = useContent();
+  const nav = navItems(c);
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
@@ -139,7 +153,7 @@ export function Nav() {
 
             <div className="hidden items-center justify-self-end gap-3 md:flex">
               <a
-                href={`https://wa.me/${site.whatsapp}`}
+                href={whatsappLink(c)}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Message us on WhatsApp"
@@ -151,7 +165,7 @@ export function Nav() {
                 href="/products"
                 className="group/shop inline-flex h-10 items-center gap-2 rounded-full bg-forest pl-5 pr-4 font-sans text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-cream transition-colors duration-300 hover:bg-forest-deep"
               >
-                Shop
+                {c.site.nav.shop}
                 <LogoMark className="h-3.5 w-4 transition-transform duration-500 ease-out-expo group-hover/shop:-rotate-12" />
               </Link>
             </div>
@@ -181,7 +195,7 @@ export function Nav() {
       >
         <LeafSprig className="pointer-events-none absolute -right-8 top-24 h-72 w-auto text-forest/10" />
         <nav aria-label="Mobile" className="flex flex-col">
-          {[{ href: "/", label: "Home" }, ...nav].map((item) => (
+          {[{ href: "/", label: c.site.nav.home }, ...nav].map((item) => (
             <div key={item.href} className="overflow-hidden border-b border-ink/10 py-3">
               <Link data-menu-link href={item.href} className="font-display block text-[2.6rem] leading-none text-forest" onClick={() => setOpen(false)}>
                 {item.label}
@@ -190,14 +204,14 @@ export function Nav() {
           ))}
         </nav>
         <div className="flex flex-col gap-3">
-          <a data-menu-meta href={`https://wa.me/${site.whatsapp}`} target="_blank" rel="noopener noreferrer" className="eyebrow flex items-center gap-2 text-forest">
-            <WhatsAppGlyph className="h-4 w-4" /> WhatsApp {site.phoneDisplay}
+          <a data-menu-meta href={whatsappLink(c)} target="_blank" rel="noopener noreferrer" className="eyebrow flex items-center gap-2 text-forest">
+            <WhatsAppGlyph className="h-4 w-4" /> WhatsApp {c.site.phoneDisplay}
           </a>
-          <a data-menu-meta href={`mailto:${site.email}`} className="eyebrow text-ink/70">
-            {site.email}
+          <a data-menu-meta href={`mailto:${c.site.email}`} className="eyebrow text-ink/70">
+            {c.site.email}
           </a>
-          <a data-menu-meta href={site.instagram} target="_blank" rel="noopener noreferrer" className="eyebrow text-gold">
-            Instagram {site.instagramHandle}
+          <a data-menu-meta href={safeUrl(c.site.instagram)} target="_blank" rel="noopener noreferrer" className="eyebrow text-gold">
+            Instagram {c.site.instagramHandle}
           </a>
         </div>
       </div>

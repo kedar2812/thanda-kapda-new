@@ -1,28 +1,31 @@
 "use client";
 
 import { useState } from "react";
-import { site, whatsappLink } from "@/data/site";
+import { whatsappLink } from "@/content";
+import { useContent } from "@/content/ContentProvider";
+import { track } from "@/lib/analytics";
 import { Button } from "@/components/ui/Button";
 
 const field =
   "w-full rounded-md border border-ink/15 bg-cream-50/80 px-4 py-3.5 text-[0.95rem] text-ink placeholder:text-ink/40 transition-colors duration-300 focus:border-forest focus:bg-cream-50 focus:outline-none";
 const label = "eyebrow mb-2 block text-ink/60";
 
-const topics = ["An order I placed", "Stocking Thanda Kapda", "A bulk or custom order", "Something else"];
-
 export function ContactForm() {
+  const c = useContent();
+  const topics = c.contact.topics.length ? c.contact.topics : ["Something else"];
   const [s, set] = useState({ name: "", contact: "", topic: topics[0], message: "" });
   const update = (k: keyof typeof s) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     set((v) => ({ ...v, [k]: e.target.value }));
 
-  const body = [`Hi Thanda Kapda Co.,`, ``, `Topic: ${s.topic}`, `Name: ${s.name || "-"}`, `Contact: ${s.contact || "-"}`, ``, s.message].join("\n");
-  const mailto = `mailto:${site.email}?subject=${encodeURIComponent(s.topic)}&body=${encodeURIComponent(body)}`;
+  const body = [`Hi ${c.site.name},`, ``, `Topic: ${s.topic}`, `Name: ${s.name || "-"}`, `Contact: ${s.contact || "-"}`, ``, s.message].join("\n");
+  const mailto = `mailto:${c.site.email}?subject=${encodeURIComponent(s.topic)}&body=${encodeURIComponent(body)}`;
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        window.open(whatsappLink(body), "_blank", "noopener,noreferrer");
+        track("contact_message", s.topic);
+        window.open(whatsappLink(c, body), "_blank", "noopener,noreferrer");
       }}
       className="grid gap-5 sm:grid-cols-2"
     >

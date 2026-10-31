@@ -1,10 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import { useRef } from "react";
 import { gsap, useGSAP, prefersReducedMotion } from "@/lib/gsap";
-import { products } from "@/data/products";
-import { site } from "@/data/site";
+import { ordinal, safeUrl, type SiteContent } from "@/content";
+import { useContent } from "@/content/ContentProvider";
+import { CmsImage } from "@/components/cms/CmsImage";
+import { Rich } from "@/components/cms/Rich";
 import { Button } from "@/components/ui/Button";
 import { TornPanel } from "@/components/ui/TornPanel";
 import { LeafSprig } from "@/components/ui/Ornaments";
@@ -13,9 +14,6 @@ import { Seal } from "@/components/ui/Seal";
 import { Tag } from "@/components/ui/Tag";
 import { Icon } from "@/components/ui/Icons";
 import { SplitReveal } from "@/components/motion/SplitReveal";
-
-const spring = products[0];
-const namaste = products[1];
 
 function GoogleG({ className }: { className?: string }) {
   return (
@@ -28,12 +26,12 @@ function GoogleG({ className }: { className?: string }) {
   );
 }
 
-function GoogleReviewsBadge() {
-  const { url, rating, count } = site.googleReviews;
-  const rated = rating !== null && count !== null;
+function GoogleReviewsBadge({ c }: { c: SiteContent }) {
+  const { url, rating, count } = c.site.googleReviews;
+  const rated = rating > 0 && count > 0;
   return (
     <a
-      href={url}
+      href={safeUrl(url)}
       target="_blank"
       rel="noopener noreferrer"
       className="group inline-flex items-center gap-3.5 rounded-md border border-ink/10 bg-cream-50/90 py-2.5 pl-3 pr-4 shadow-paper transition-[border-color,box-shadow,transform] duration-500 ease-out-expo hover:-translate-y-0.5 hover:border-ink/20 hover:shadow-lift"
@@ -42,15 +40,15 @@ function GoogleReviewsBadge() {
         <GoogleG className="h-5 w-5" />
       </span>
       <span className="flex flex-col leading-tight">
-        <span className="eyebrow text-[0.58rem] text-ink/50">Google Reviews</span>
+        <span className="eyebrow text-[0.58rem] text-ink/50">{c.home.hero.reviewsEyebrow}</span>
         {rated ? (
           <span className="mt-1 flex items-center gap-2 text-[0.85rem] text-ink/70">
-            <strong className="font-display text-[1.15rem] font-normal leading-none text-forest">{rating!.toFixed(1)}</strong>
-            <Stars />
+            <strong className="font-display text-[1.15rem] font-normal leading-none text-forest">{rating.toFixed(1)}</strong>
+            <Stars rating={rating} />
             <span>({count})</span>
           </span>
         ) : (
-          <span className="mt-1 font-display text-[1.05rem] leading-none text-forest">See what guests say</span>
+          <span className="mt-1 font-display text-[1.05rem] leading-none text-forest">{c.home.hero.reviewsFallback}</span>
         )}
       </span>
       <svg viewBox="0 0 16 16" className="ml-1 h-3.5 w-3.5 text-ink/40 transition-transform duration-500 ease-out-expo group-hover:translate-x-0.5 group-hover:text-forest" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
@@ -61,9 +59,9 @@ function GoogleReviewsBadge() {
   );
 }
 
-function Stars() {
+function Stars({ rating }: { rating: number }) {
   return (
-    <span className="flex gap-0.5 text-gold" aria-label="Five stars">
+    <span className="flex gap-0.5 text-gold" role="img" aria-label={`${rating.toFixed(1)} out of 5 stars`}>
       {Array.from({ length: 5 }).map((_, i) => (
         <svg key={i} viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="currentColor" aria-hidden>
           <path d="M10 1.5l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6L1.3 7.8l6.1-.7z" />
@@ -73,8 +71,18 @@ function Stars() {
   );
 }
 
+/** Average Amazon rating across the wipes, weighted by how many ratings each has. */
+export function amazonRating(c: SiteContent) {
+  const total = c.products.reduce((n, p) => n + p.rating.count, 0);
+  return total ? c.products.reduce((n, p) => n + p.rating.value * p.rating.count, 0) / total : 0;
+}
+
 export function Hero() {
   const root = useRef<HTMLElement>(null);
+  const c = useContent();
+  const h = c.home.hero;
+  const [first, second] = c.products;
+  const rating = amazonRating(c);
 
   useGSAP(
     () => {
@@ -152,7 +160,7 @@ export function Hero() {
   );
 
   return (
-    <section ref={root} className="relative overflow-hidden" aria-labelledby="hero-title">
+    <section ref={root} data-cms="home.hero" className="relative overflow-hidden" aria-labelledby="hero-title">
       <LeafSprig className="pointer-events-none absolute -left-14 bottom-[-4rem] hidden h-[34rem] w-auto text-forest/[0.06] lg:block" />
 
       <div className="container-wide relative grid min-h-[100svh] grid-cols-1 items-center gap-10 pb-16 pt-28 lg:grid-cols-12 lg:gap-6 lg:pb-0 lg:pt-20">
@@ -161,42 +169,45 @@ export function Hero() {
           <p data-hero-eyebrow className="eyebrow flex items-center gap-3 text-gold opacity-0">
             <LogoMark className="h-4 w-[1.15rem] shrink-0" />
             <span>
-              Thanda Kapda Co.
-              <span className="hidden sm:inline"> · Essence of pure indulgence</span>
+              {c.site.name}
+              {h.eyebrow && <span className="hidden sm:inline"> · {h.eyebrow}</span>}
             </span>
           </p>
 
           <SplitReveal as="h1" id="hero-title" immediate delay={0.55} stagger={0.11} className="display-1 mt-8 text-forest">
-            A cool cloth for a <em className="text-gold">warm country.</em>
+            <Rich text={h.title} em="text-gold" />
           </SplitReveal>
 
           <p data-hero-copy className="lede mt-8 max-w-xl text-ink/80 opacity-0">
-            The oldest welcome in India is a cold, damp cloth pressed into your hands. We folded it into a sachet:
-            soaked in aloe, free of alcohol, and ready wherever the day gets hot.
+            {h.lede}
           </p>
 
           <div data-hero-copy className="mt-10 flex flex-wrap items-center gap-4 opacity-0">
             <Button href="/products" size="lg" arrow>
-              Shop the wipes
+              {h.primaryCta}
             </Button>
             <Button href="/bulk" variant="outline" size="lg">
-              Bulk &amp; custom orders
+              {h.secondaryCta}
             </Button>
           </div>
 
           <div data-hero-copy className="mt-6 opacity-0">
-            <GoogleReviewsBadge />
+            <GoogleReviewsBadge c={c} />
           </div>
 
           <div data-hero-copy className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 text-[0.8rem] text-ink/70 opacity-0">
-            <span className="flex items-center gap-2">
-              <Stars />
-              <span>
-                <strong className="font-semibold text-ink">5.0</strong> on Amazon India
-              </span>
-            </span>
-            <span className="hidden h-4 w-px bg-ink/20 sm:block" />
-            <span>Alcohol-free · Paraben-free · pH neutral</span>
+            {rating > 0 && (
+              <>
+                <span className="flex items-center gap-2">
+                  <Stars rating={rating} />
+                  <span>
+                    <strong className="font-semibold text-ink">{rating.toFixed(1)}</strong> {h.ratingNote}
+                  </span>
+                </span>
+                <span className="hidden h-4 w-px bg-ink/20 sm:block" />
+              </>
+            )}
+            <span>{h.claimsLine}</span>
           </div>
 
           <div data-hero-cue className="mt-16 hidden items-center gap-3 opacity-0 lg:flex">
@@ -239,15 +250,15 @@ export function Hero() {
               className="absolute right-3 top-1/2 hidden -translate-y-1/2 rotate-180 whitespace-nowrap font-sans text-[0.6rem] font-semibold uppercase tracking-[0.34em] text-cream/45 opacity-0 lg:block"
               style={{ writingMode: "vertical-rl" }}
             >
-              Est. 2025 · Born in India · Refreshing the world
+              {h.edge}
             </p>
 
             {/* Hanging tag from the top edge */}
             <div data-hero-tag data-depth="12" className="absolute right-[10%] top-2 hidden opacity-0 sm:block lg:right-[12%] lg:top-4" style={{ transformOrigin: "50% -3rem" }}>
-              <Tag place="India · Est. 2025" title="Where it all began." text="A cool cloth for a guest is the oldest welcome we know." className="w-32 lg:w-36" />
+              <Tag place={h.tag.place} title={h.tag.title} text={h.tag.text} className="w-32 lg:w-36" />
             </div>
 
-            {/* Morning Spring */}
+            {/* First wipe */}
             <figure
               data-hero-card
               data-depth="10"
@@ -255,11 +266,11 @@ export function Hero() {
             >
               <span className="tape -left-5 -top-2 rotate-[-28deg]" aria-hidden />
               <div className="frame aspect-[3/2] bg-[#fbf8f1]">
-                <Image src={spring.packshot.src} alt={spring.packshot.alt} fill priority sizes="(min-width: 1024px) 28vw, 62vw" className="object-cover" />
+                <CmsImage image={h.firstPhoto} priority sizes="(min-width: 1024px) 28vw, 62vw" />
               </div>
               <figcaption className="script mt-3 flex items-baseline justify-between text-[1rem] text-ink/80">
-                <span>Morning Spring</span>
-                <span className="eyebrow text-[0.55rem] text-ink/50">No. 01</span>
+                <span>{first?.name}</span>
+                <span className="eyebrow text-[0.55rem] text-ink/50">{ordinal(0)}</span>
               </figcaption>
             </figure>
 
@@ -268,7 +279,7 @@ export function Hero() {
               <Seal />
             </div>
 
-            {/* Namasté */}
+            {/* Second wipe */}
             <figure
               data-hero-card
               data-depth="18"
@@ -276,11 +287,11 @@ export function Hero() {
             >
               <span className="tape -right-6 -top-2 rotate-[22deg]" aria-hidden />
               <div className="frame aspect-[4/5] bg-[#fbf8f1]">
-                <Image src={namaste.hero.src} alt={namaste.hero.alt} fill priority sizes="(min-width: 1024px) 20vw, 46vw" className="object-cover" />
+                <CmsImage image={h.secondPhoto} priority sizes="(min-width: 1024px) 20vw, 46vw" />
               </div>
               <figcaption className="script mt-3 flex items-baseline justify-between text-[1rem] text-ink/80">
-                <span>Namasté</span>
-                <span className="eyebrow text-[0.55rem] text-ink/50">No. 02</span>
+                <span>{second?.name}</span>
+                <span className="eyebrow text-[0.55rem] text-ink/50">{ordinal(1)}</span>
               </figcaption>
             </figure>
 
@@ -292,7 +303,7 @@ export function Hero() {
             >
               <span className="tape -top-2 right-3 rotate-[6deg]" aria-hidden />
               <p className="script text-[1.05rem] leading-tight text-forest">
-                &ldquo;Thanda kapda&rdquo; &mdash; literally, <em>cold cloth</em>. The oldest welcome in India.
+                <Rich text={h.note} />
               </p>
             </div>
           </div>

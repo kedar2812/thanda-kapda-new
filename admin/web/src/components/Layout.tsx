@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { AnimatePresence, motion } from 'motion/react'
 import {
-  Activity, Boxes, ChevronRight, Clock, Gift, House, LayoutGrid, Package, Receipt, ReceiptIndianRupee, Settings, ShoppingBag, Wallet, type LucideIcon,
+  Activity, BarChart3, Boxes, ChevronRight, Clock, Gift, House, LayoutGrid, Package, PenLine, Receipt, ReceiptIndianRupee, Settings, ShoppingBag, Wallet, type LucideIcon,
 } from 'lucide-react'
 import { useBoot, useSyncState } from '@/lib/data'
 import { cx, Group } from './ui'
 
-interface NavItem { to: string; label: string; icon: LucideIcon; hint?: string }
+interface NavItem { to: string; label: string; icon: LucideIcon; hint?: string; /** Starts a labelled group in the sidebar. */ group?: string }
 
 export const NAV: NavItem[] = [
   { to: '/', label: 'Overview', icon: House },
@@ -19,7 +19,9 @@ export const NAV: NavItem[] = [
   { to: '/amazon', label: 'Amazon', icon: Package, hint: 'Orders and payouts' },
   { to: '/samples', label: 'Samples', icon: Gift, hint: 'Free wipes given to cafés' },
   { to: '/gst', label: 'GST', icon: ReceiptIndianRupee, hint: 'Purchase and sales registers' },
-  { to: '/activity', label: 'Activity', icon: Activity, hint: 'Who changed what, and when' },
+  { to: '/website', label: 'Website', icon: PenLine, hint: 'Edit words and photos on thandakapda.co', group: 'Website' },
+  { to: '/analytics', label: 'Visitors', icon: BarChart3, hint: 'Who visits the website and what they do' },
+  { to: '/activity', label: 'Activity', icon: Activity, hint: 'Who changed what, and when', group: 'Team' },
   { to: '/settings', label: 'Settings', icon: Settings, hint: 'Lists, team, theme, backup' },
 ]
 
@@ -62,8 +64,9 @@ function Sidebar() {
       </div>
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto no-scrollbar">
         {NAV.map((n) => (
+          <Fragment key={n.to}>
+          {n.group && <div className="mt-4 mb-1 px-2.5 text-[0.6875rem] font-semibold uppercase tracking-[0.06em] text-label-3">{n.group}</div>}
           <NavLink
-            key={n.to}
             to={n.to}
             end={n.to === '/'}
             className={({ isActive }) =>
@@ -76,6 +79,7 @@ function Sidebar() {
             <n.icon className="size-[1.125rem]" strokeWidth={2} />
             {n.label}
           </NavLink>
+          </Fragment>
         ))}
       </nav>
       <div className="mt-4 flex items-center justify-between rounded-xl px-2.5 py-2">
@@ -128,7 +132,7 @@ export function Shell() {
  * iOS-style page: a large title that hands off to a small centred title in a
  * translucent bar once it scrolls away.
  */
-export function Page({ title, subtitle, actions, toolbar, children, back }: { title: string; subtitle?: ReactNode; actions?: ReactNode; toolbar?: ReactNode; children: ReactNode; back?: ReactNode }) {
+export function Page({ title, subtitle, actions, toolbar, children, back, wide }: { title: string; subtitle?: ReactNode; actions?: ReactNode; toolbar?: ReactNode; children: ReactNode; back?: ReactNode; /** Use the full width (the website editor). */ wide?: boolean }) {
   const sentinel = useRef<HTMLDivElement>(null)
   const [condensed, setCondensed] = useState(false)
   useEffect(() => {
@@ -140,7 +144,7 @@ export function Page({ title, subtitle, actions, toolbar, children, back }: { ti
   }, [])
 
   return (
-    <div className="mx-auto w-full max-w-6xl">
+    <div className={cx('mx-auto w-full', wide ? 'max-w-[110rem]' : 'max-w-6xl')}>
       <header
         className={cx(
           'sticky top-0 z-30 safe-top transition-[background-color,border-color] duration-200',

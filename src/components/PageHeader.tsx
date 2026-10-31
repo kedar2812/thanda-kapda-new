@@ -2,6 +2,7 @@ import clsx from "clsx";
 import { Reveal } from "@/components/motion/Reveal";
 import { SplitReveal } from "@/components/motion/SplitReveal";
 import { Flourish } from "@/components/ui/Ornaments";
+import { Rich } from "@/components/cms/Rich";
 
 export function PageHeader({
   eyebrow,
@@ -10,6 +11,7 @@ export function PageHeader({
   align = "left",
   className,
   children,
+  cms,
 }: {
   eyebrow: string;
   title: string;
@@ -17,16 +19,18 @@ export function PageHeader({
   align?: "left" | "center";
   className?: string;
   children?: React.ReactNode;
+  /** Content path the dashboard preview should open when this header is clicked. */
+  cms?: string;
 }) {
   const center = align === "center";
   return (
-    <header className={clsx("container-wide pt-32 md:pt-44", className)}>
+    <header data-cms={cms} className={clsx("container-wide pt-32 md:pt-44", className)}>
       <div className={clsx("max-w-4xl", center && "mx-auto text-center")}>
         <Reveal immediate>
           <p className="eyebrow text-gold">{eyebrow}</p>
         </Reveal>
         <SplitReveal as="h1" immediate delay={0.15} className="display-1 mt-6 text-forest">
-          {title}
+          <Rich text={title} />
         </SplitReveal>
         {intro && (
           <Reveal immediate delay={0.55}>

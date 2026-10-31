@@ -18,6 +18,12 @@ ErrorDocument 404 /404.html
   RewriteRule ^(.*/)?__next\.([^./]+)\.__PAGE__\.txt$ $1__next.$2/__PAGE__.txt [L]
 </IfModule>
 
+<IfModule mod_setenvif.c>
+  # Next.js checks each link with a HEAD request before prefetching it. A HEAD
+  # answer marked as gzip but with no body fails in Chrome, so don't compress it.
+  SetEnvIf Request_Method "^HEAD$" no-gzip
+</IfModule>
+
 <IfModule mod_deflate.c>
   AddOutputFilterByType DEFLATE text/html text/plain text/css application/javascript application/json image/svg+xml
 </IfModule>
@@ -27,6 +33,9 @@ ErrorDocument 404 /404.html
   ExpiresByType text/html "access plus 0 seconds"
   ExpiresByType image/jpeg "access plus 30 days"
   ExpiresByType image/png "access plus 30 days"
+  ExpiresByType image/webp "access plus 30 days"
+  ExpiresByType image/svg+xml "access plus 7 days"
+  ExpiresByType font/woff2 "access plus 1 year"
 </IfModule>
 
 <IfModule mod_headers.c>
@@ -36,4 +45,6 @@ ErrorDocument 404 /404.html
   </If>
   Header always set X-Content-Type-Options "nosniff"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  # Only the dashboard may show the site in a frame (its live preview).
+  Header always set Content-Security-Policy "frame-ancestors 'self' https://admin.thandakapda.co"
 </IfModule>

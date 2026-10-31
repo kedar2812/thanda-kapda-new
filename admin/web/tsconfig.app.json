@@ -8,7 +8,14 @@
     "allowArbitraryExtensions": true,
     "skipLibCheck": true,
     "strict": true,
-    "paths": { "@/*": ["./src/*"] },
+    "paths": {
+      "@/*": ["./src/*"],
+      "@site/content/*": ["../../src/content/*"],
+      "@site/icons": ["../../src/components/ui/Icons.tsx"],
+      "react": ["./node_modules/@types/react"],
+      "react/*": ["./node_modules/@types/react/*"]
+    },
+    "resolveJsonModule": true,
 
     /* Bundler mode */
     "moduleResolution": "bundler",
@@ -24,5 +31,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src", "../../src/content/types.ts", "../../src/content/defaults.ts", "../../src/content/normalize.ts", "../../src/content/schema.ts", "../../src/components/ui/Icons.tsx"]
 }

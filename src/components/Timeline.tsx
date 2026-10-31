@@ -2,19 +2,13 @@
 
 import { useRef } from "react";
 import { gsap, useGSAP, prefersReducedMotion } from "@/lib/gsap";
-import { Icon, type IconName } from "@/components/ui/Icons";
-
-const milestones: { when: string; title: string; text: string; icon: IconName }[] = [
-  { when: "The idea", title: "Blueprint", text: "India's cold-cloth welcome, folded into a sealed sachet.", icon: "bulb" },
-  { when: "2025", title: "Morning Spring", text: "The first sachet, aloe and vitamin E, goes on sale across India.", icon: "flask" },
-  { when: "Then", title: "Namasté", text: "The after-meal wipe: lemongrass, aloe and centella, for the end of a meal.", icon: "cloche" },
-  { when: "Now", title: "Custom printing", text: "Hospitality partners put their own names on the sachet.", icon: "gift" },
-  { when: "Next", title: "Beyond borders", text: "Distributors in the Middle East, Africa, Europe and Southeast Asia.", icon: "globePlane" },
-];
+import { Icon } from "@/components/ui/Icons";
+import { useContent } from "@/content/ContentProvider";
 
 /** Vertical journey timeline; the spine draws as you scroll and each dot lights up in turn. */
 export function Timeline() {
   const root = useRef<HTMLOListElement>(null);
+  const milestones = useContent().story.milestones;
 
   useGSAP(
     () => {
@@ -46,7 +40,7 @@ export function Timeline() {
       <span aria-hidden className="absolute bottom-3 left-[7px] top-3 w-px bg-ink/15" />
       <span data-spine aria-hidden className="absolute bottom-3 left-[7px] top-3 w-px bg-gold" style={{ transform: "scaleY(0)" }} />
       {milestones.map((m, i) => (
-        <li key={m.title} data-milestone className="relative pb-10 last:pb-0">
+        <li key={i} data-milestone className="relative pb-10 last:pb-0">
           <span data-dot aria-hidden className="absolute -left-10 top-1.5 h-[15px] w-[15px] rounded-full border-2 border-cream bg-forest shadow-[0_0_0_1px_var(--color-gold)]" />
           <div className="flex items-start gap-5">
             <div>

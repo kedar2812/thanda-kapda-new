@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Activity as ActivityIcon, Archive, Pencil, Plus, RotateCcw, Trash2, Upload } from 'lucide-react'
+import { Activity as ActivityIcon, Archive, ImagePlus, Pencil, Plus, RotateCcw, Send, Trash2, Undo2, Upload } from 'lucide-react'
 import { Page } from '@/components/Layout'
 import { matches } from '@/components/common'
 import { Empty, Group, Loading, Row, SearchField, cx } from '@/components/ui'
@@ -16,6 +16,9 @@ const ICONS: Record<string, { icon: typeof Plus; tone: string }> = {
   restored: { icon: RotateCcw, tone: 'bg-accent-soft text-accent' },
   imported: { icon: Upload, tone: 'bg-accent-soft text-accent' },
   exported: { icon: Upload, tone: 'bg-fill text-label-2' },
+  published: { icon: Send, tone: 'bg-green-soft text-green' },
+  uploaded: { icon: ImagePlus, tone: 'bg-accent-soft text-accent' },
+  discarded: { icon: Undo2, tone: 'bg-orange-soft text-orange' },
 }
 
 export default function ActivityPage() {

@@ -1,16 +1,20 @@
+"use client";
+
 import { Reveal } from "@/components/motion/Reveal";
 import { SplitReveal } from "@/components/motion/SplitReveal";
 import { BulkForm } from "@/components/BulkForm";
 import { TornPanel } from "@/components/ui/TornPanel";
 import { LeafSprig, Stamp } from "@/components/ui/Ornaments";
 import { LogoMark } from "@/components/ui/Logo";
-import { site } from "@/data/site";
-
-const segments = ["Restaurants", "Hotels", "Airlines", "Weddings", "Caterers", "Offices", "Gyms", "Retail"];
+import { Rich } from "@/components/cms/Rich";
+import { phoneHref } from "@/content";
+import { useContent } from "@/content/ContentProvider";
 
 export function BulkCta() {
+  const c = useContent();
+  const b = c.home.bulk;
   return (
-    <section id="bulk" className="relative z-10" aria-labelledby="bulk-title">
+    <section id="bulk" data-cms="home.bulk" className="relative z-10" aria-labelledby="bulk-title">
       <TornPanel side="top" seed={21} amplitude={0.5} className="torn-strip w-full" under="bg-transparent" />
 
       <div className="parchment-dark relative overflow-hidden text-cream">
@@ -20,33 +24,29 @@ export function BulkCta() {
           <div className="grid gap-14 lg:grid-cols-12 lg:gap-10">
             <div className="lg:col-span-5">
               <Reveal>
-                <p className="eyebrow text-gold-light">Custom &amp; bulk orders</p>
+                <p className="eyebrow text-gold-light">{b.eyebrow}</p>
               </Reveal>
               <SplitReveal as="h2" id="bulk-title" className="display-2 mt-6 text-cream">
-                Your brand on every table.
+                <Rich text={b.title} />
               </SplitReveal>
               <Reveal delay={0.1}>
-                <p className="mt-8 max-w-md text-cream/75">
-                  We supply Morning Spring and Namasté by the case and print custom sachets for hospitality, travel
-                  and events. Tell us the quantity and the occasion; we come back with pricing and lead times, not a
-                  brochure.
-                </p>
+                <p className="mt-8 max-w-md text-cream/75">{b.text}</p>
               </Reveal>
               <Reveal delay={0.15} stagger={0.05} className="mt-8 flex flex-wrap gap-2">
-                {segments.map((s) => (
-                  <span key={s} className="rounded-full border border-cream/20 px-3 py-1.5 text-[0.68rem] uppercase tracking-[0.16em] text-cream/80">
+                {b.segments.map((s, i) => (
+                  <span key={i} className="rounded-full border border-cream/20 px-3 py-1.5 text-[0.68rem] uppercase tracking-[0.16em] text-cream/80">
                     {s}
                   </span>
                 ))}
               </Reveal>
               <Reveal delay={0.2} className="mt-12 flex items-center gap-6">
-                <Stamp text="CUSTOM PRINTED · MADE IN INDIA · " tone="gold" className="w-28 shrink-0">
+                <Stamp text={b.stamp} tone="gold" className="w-28 shrink-0">
                   <LogoMark className="h-8 w-9 text-gold-light" />
                 </Stamp>
                 <p className="text-[0.95rem] text-cream/70">
-                  Prefer to talk?{" "}
-                  <a href={site.phoneHref} className="link-line text-cream">
-                    {site.phoneDisplay}
+                  {b.phonePrompt}{" "}
+                  <a href={phoneHref(c)} className="link-line text-cream">
+                    {c.site.phoneDisplay}
                   </a>
                 </p>
               </Reveal>

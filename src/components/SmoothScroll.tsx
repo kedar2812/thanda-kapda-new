@@ -12,7 +12,7 @@ function subscribeReduced(onChange: () => void) {
   mq.addEventListener("change", onChange);
   return () => mq.removeEventListener("change", onChange);
 }
-const getReduced = () => window.matchMedia(REDUCED).matches;
+const getReduced = () => window.__tkPreview === true || window.matchMedia(REDUCED).matches;
 const getServerReduced = () => false;
 
 /**
@@ -27,10 +27,6 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
   const lenisRef = useRef<Lenis | null>(null);
   const pathname = usePathname();
   const reduced = useSyncExternalStore(subscribeReduced, getReduced, getServerReduced);
-
-  useEffect(() => {
-    document.documentElement.classList.add("js");
-  }, []);
 
   useEffect(() => {
     if (reduced) return;

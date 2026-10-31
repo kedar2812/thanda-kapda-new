@@ -1,15 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { site, whatsappLink } from "@/data/site";
+import { whatsappLink } from "@/content";
+import { useContent } from "@/content/ContentProvider";
+import { track } from "@/lib/analytics";
 import { Button } from "@/components/ui/Button";
-
-const CUSTOM = "Custom-printed sachets";
-const needs = ["Morning Spring by the case", "Namasté by the case", CUSTOM, "A mix, let's talk"];
-const caseQuantities = ["500 – 1,000 sachets", "1,000 – 5,000 sachets", "5,000 – 20,000 sachets", "20,000+ sachets", "Not sure yet"];
-/** Custom printing has a 2,00,000-sachet minimum run. */
-const customQuantities = ["2,00,000 – 5,00,000 sachets", "5,00,000 – 10,00,000 sachets", "10,00,000+ sachets"];
-const quantitiesFor = (need: string) => (need === CUSTOM ? customQuantities : caseQuantities);
 
 const LOGO_TYPES = ["image/png", "image/jpeg", "image/webp", "image/svg+xml", "application/pdf"];
 const LOGO_MAX_MB = 10;
@@ -48,6 +43,16 @@ function toPng(file: File): Promise<Blob> {
  * where the browser allows it, ready to paste into the chat.
  */
 export function BulkForm({ compact = false }: { compact?: boolean }) {
+  const c = useContent();
+  const f = c.bulkForm;
+  const CUSTOM = f.customOption || "Custom-printed sachets";
+  // The custom option goes third, as it always has.
+  const needs = [...f.otherNeeds.slice(0, 2), CUSTOM, ...f.otherNeeds.slice(2)];
+  const caseQuantities = f.caseQuantities.length ? f.caseQuantities : ["Not sure yet"];
+  /** Custom printing has its own, much larger, minimum run. */
+  const customQuantities = f.customQuantities.length ? f.customQuantities : caseQuantities;
+  const quantitiesFor = (need: string) => (need === CUSTOM ? customQuantities : caseQuantities);
+
   const [state, setState] = useState({
     name: "",
     org: "",
@@ -79,7 +84,7 @@ export function BulkForm({ compact = false }: { compact?: boolean }) {
   const isCustom = state.need === CUSTOM;
 
   const message = [
-    `Hi Thanda Kapda Co., I'd like to talk about a bulk order.`,
+    `Hi ${c.site.name}, I'd like to talk about a bulk order.`,
     ``,
     `Name: ${state.name || "-"}`,
     `Organisation: ${state.org || "-"}`,
@@ -139,11 +144,12 @@ export function BulkForm({ compact = false }: { compact?: boolean }) {
         pasted = false;
       }
     }
-    window.open(whatsappLink(message), "_blank", "noopener,noreferrer");
+    track("bulk_enquiry", `${state.need} · ${state.qty}`);
+    window.open(whatsappLink(c, message), "_blank", "noopener,noreferrer");
     if (logo) setSent(pasted ? "pasted" : "attach");
   };
 
-  const mailto = `mailto:${site.email}?subject=${encodeURIComponent("Bulk order enquiry")}&body=${encodeURIComponent(message)}`;
+  const mailto = `mailto:${c.site.email}?subject=${encodeURIComponent("Bulk order enquiry")}&body=${encodeURIComponent(message)}`;
 
   return (
     <form onSubmit={submit} className="grid gap-5 sm:grid-cols-2">
@@ -184,10 +190,10 @@ export function BulkForm({ compact = false }: { compact?: boolean }) {
             <option key={q}>{q}</option>
           ))}
         </select>
-        {isCustom && (
+        {isCustom && f.customNote && (
           <p id="bf-qty-note" className="mt-2 flex items-center gap-2 text-[0.8rem] text-ink/60">
             <span aria-hidden className="h-1 w-1 rounded-full bg-gold" />
-            Custom printing starts at 2,00,000 sachets.
+            {f.customNote}
           </p>
         )}
       </div>
@@ -273,12 +279,12 @@ export function BulkForm({ compact = false }: { compact?: boolean }) {
           className={field}
           value={state.message}
           onChange={update("message")}
-          placeholder="The occasion, a date you're working towards, colours or copy you'd like printed…"
+          placeholder={f.messagePlaceholder}
         />
       </div>
       <div className="flex flex-wrap items-center gap-4 sm:col-span-2">
         <Button type="submit" size="lg" arrow>
-          Send on WhatsApp
+          {f.submit}
         </Button>
         <a href={mailto} className="link-line eyebrow text-ink/70">
           Or email us instead

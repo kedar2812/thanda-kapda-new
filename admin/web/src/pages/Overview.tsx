@@ -1,4 +1,7 @@
 import { useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { get } from '@/lib/api'
+import { todayISO } from '@/lib/format'
 import { useNavigate } from 'react-router'
 import { AlertTriangle } from 'lucide-react'
 import { Page } from '@/components/Layout'
@@ -72,6 +75,8 @@ export default function Overview() {
             </Group>
           )}
 
+          <WebsiteWeek onOpen={() => navigate('/analytics')} />
+
           <div className="grid gap-x-6 lg:grid-cols-5">
             <div className="lg:col-span-3">
               <Group title="Last 12 months">
@@ -102,5 +107,36 @@ export default function Overview() {
         </>
       )}
     </Page>
+  )
+}
+
+/** The website's last seven days, in three numbers. */
+function WebsiteWeek({ onOpen }: { onOpen: () => void }) {
+  const to = todayISO()
+  const d = new Date(`${to}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() - 6)
+  const from = d.toISOString().slice(0, 10)
+  const { data } = useQuery({
+    queryKey: ['analytics', from, to],
+    queryFn: () => get<{ totals: { visitors: number }; goals: Record<string, { count: number }>; first_day: string | null }>(`analytics/overview?from=${from}&to=${to}`),
+    staleTime: 60_000,
+  })
+  if (!data?.first_day) return null
+  const g = (k: string) => data.goals[k]?.count ?? 0
+  return (
+    <Group title="Website · last 7 days">
+      <button type="button" onClick={onOpen} className="row-press grid w-full grid-cols-3 text-left">
+        {[
+          ['Visitors', data.totals.visitors],
+          ['Enquiries', g('bulk_enquiry') + g('contact_message') + g('whatsapp')],
+          ['Amazon taps', g('amazon')],
+        ].map(([label, n]) => (
+          <span key={label} className="border-r border-separator px-4 py-3 last:border-r-0">
+            <span className="block text-[0.8125rem] text-label-2">{label}</span>
+            <span className="num display block text-[1.25rem] font-semibold">{qty(Number(n))}</span>
+          </span>
+        ))}
+      </button>
+    </Group>
   )
 }

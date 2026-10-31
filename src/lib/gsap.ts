@@ -11,10 +11,14 @@ ScrollTrigger.config({ ignoreMobileResize: true });
 
 export { gsap, ScrollTrigger, SplitText, useGSAP };
 
-/** True when the visitor prefers reduced motion. Safe on the server. */
+/**
+ * True when the visitor prefers reduced motion, or the page is in the
+ * dashboard's preview frame (where everything should simply be visible).
+ * Safe on the server.
+ */
 export function prefersReducedMotion(): boolean {
   if (typeof window === "undefined") return false;
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  return window.__tkPreview === true || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 /** True for coarse pointers (phones, tablets). Safe on the server. */

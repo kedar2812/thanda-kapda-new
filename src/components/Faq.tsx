@@ -1,18 +1,20 @@
 "use client";
 
 import clsx from "clsx";
-import { useState } from "react";
-import type { Faq as FaqItem } from "@/data/faq";
+import { useId, useState } from "react";
+
+type FaqItem = { q: string; a: string };
 
 export function Faq({ items, defaultOpen = 0 }: { items: FaqItem[]; defaultOpen?: number | null }) {
   const [open, setOpen] = useState<number | null>(defaultOpen);
+  const uid = useId();
   return (
     <div className="divide-y divide-ink/10 border-y border-ink/10">
       {items.map((item, i) => {
         const isOpen = open === i;
-        const id = `faq-${i}`;
+        const id = `${uid}-faq-${i}`;
         return (
-          <div key={item.q}>
+          <div key={i}>
             <button
               type="button"
               className="group flex w-full items-start justify-between gap-6 py-6 text-left"

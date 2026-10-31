@@ -237,8 +237,12 @@ function toIsoDate(s: string): string {
   if (m) return `${m[1]}-${m[2]}-${m[3]}`
   m = t.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/) // Indian day-first
   if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`
+  // Other formats ("19 Sep 2026", "Sep 19, 2026"): read the calendar date as written.
+  // toISOString() would convert to UTC and, in India, land on the day before.
   const d = new Date(t)
-  return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10)
+  if (isNaN(d.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
 function toStatus(s: string): AmazonOrder['status'] {

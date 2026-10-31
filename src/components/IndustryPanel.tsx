@@ -1,17 +1,21 @@
 "use client";
 
-import Image from "next/image";
 import { useRef } from "react";
 import { gsap, useGSAP, prefersReducedMotion } from "@/lib/gsap";
 import { SplitReveal } from "@/components/motion/SplitReveal";
 import { Icon } from "@/components/ui/Icons";
 import { PaperScrap } from "@/components/ui/Paper";
 import { TornPanel } from "@/components/ui/TornPanel";
-import { industries } from "@/data/industries";
+import { CmsImage } from "@/components/cms/CmsImage";
+import { Rich } from "@/components/cms/Rich";
+import { useContent } from "@/content/ContentProvider";
 
 /** C05 "Perfect for every industry": a framed green panel, gold icon grid and a torn photo edge. */
 export function IndustryPanel() {
   const root = useRef<HTMLDivElement>(null);
+  const c = useContent();
+  const k = c.home.industries;
+  const industries = c.bulk.industries;
 
   useGSAP(
     () => {
@@ -27,18 +31,18 @@ export function IndustryPanel() {
   );
 
   return (
-    <div ref={root} className="frame-double parchment-dark relative overflow-hidden rounded-md text-cream shadow-lift">
+    <div ref={root} data-cms="home.industries" className="frame-double parchment-dark relative overflow-hidden rounded-md text-cream shadow-lift">
       <div className="grid lg:grid-cols-12">
         <div className="relative z-10 px-8 pb-12 pt-14 sm:px-12 lg:col-span-8 lg:py-16 lg:pl-16">
           <SplitReveal as="h3" className="display-2 uppercase text-cream" stagger={0.1}>
-            Perfect for every <span className="text-gold-light">industry</span>
+            <Rich text={k.title} em="not-italic text-gold-light" />
           </SplitReveal>
           <span data-ind-rule aria-hidden className="mt-6 block h-px w-40 bg-gold-light/60" />
 
           <div data-ind-note className="mt-8 w-full max-w-sm">
             <PaperScrap>
               <p className="script text-[1.35rem] leading-snug text-forest">
-                Wherever there is an experience, there is true class in the details.
+                {k.note}
               </p>
             </PaperScrap>
           </div>
@@ -46,7 +50,7 @@ export function IndustryPanel() {
           <ul className="mt-12 grid grid-cols-3 sm:grid-cols-4">
             {industries.map((it, i) => (
               <li
-                key={it.label}
+                key={i}
                 data-ind
                 className={`flex flex-col items-center gap-3 border-gold-light/20 px-2 py-5 text-center ${(i + 1) % 4 !== 0 ? "sm:border-r" : ""} ${(i + 1) % 3 !== 0 ? "max-sm:border-r" : ""} ${i < industries.length - 4 ? "sm:border-b" : ""} ${i < industries.length - 3 ? "max-sm:border-b" : ""}`}
               >
@@ -59,7 +63,7 @@ export function IndustryPanel() {
 
         <div className="relative min-h-[18rem] lg:col-span-4">
           <div data-ind-photo className="absolute inset-0">
-            <Image src="/products/morning-spring-table.jpg" alt="A candle-lit banquet table set with a Morning Spring sachet" fill sizes="(min-width: 1024px) 34vw, 100vw" className="object-cover" />
+            <CmsImage image={k.photo} sizes="(min-width: 1024px) 34vw, 100vw" />
           </div>
           <div aria-hidden className="absolute inset-0 bg-gradient-to-r from-forest/40 to-transparent" />
           {/* Torn edge where the green panel meets the photograph */}

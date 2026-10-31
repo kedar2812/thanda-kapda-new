@@ -9,6 +9,9 @@ require __DIR__ . '/src/entities.php';
 require __DIR__ . '/src/sales.php';
 require __DIR__ . '/src/reports.php';
 require __DIR__ . '/src/backup.php';
+require __DIR__ . '/src/migrate.php';
+require __DIR__ . '/src/cms.php';
+require __DIR__ . '/src/analytics.php';
 
 error_reporting(E_ALL);
 ini_set('display_errors', '0');
@@ -19,6 +22,12 @@ $path = trim((string) ($_GET['r'] ?? ''), '/');
 $parts = $path === '' ? [] : explode('/', $path);
 
 try {
+    // Public endpoints used by the website itself (no login, no custom headers).
+    if (($parts[0] ?? '') === 'public') {
+        ensure_installed();
+        send(route_public($method, $parts[1] ?? ''));
+    }
+
     // Writes must come from our own front end (blocks cross-site form posts).
     if ($method !== 'GET' && ($_SERVER['HTTP_X_TK_CLIENT'] ?? '') !== '1') {
         throw new HttpError(403, 'Request blocked.');
@@ -32,6 +41,30 @@ try {
     error_log('[tk-admin] ' . $e);
     $msg = !empty(config()['debug']) ? $e->getMessage() : 'Something went wrong on the server. Please try again.';
     send(['error' => $msg, 'code' => 'server'], 500);
+}
+
+function route_public(string $method, string $what): mixed
+{
+    if ($what === 'ping' && $method === 'POST') {
+        collect();
+    }
+    if ($what === 'ping' && $method === 'OPTIONS') {
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: POST');
+        header('Access-Control-Allow-Headers: Content-Type');
+        http_response_code(204);
+        exit;
+    }
+    if ($what === 'content' && $method === 'GET') {
+        // Same as live/content.json, for when the static file can't be read.
+        header('Access-Control-Allow-Origin: *');
+        $r = one('SELECT * FROM cms_revisions ORDER BY id DESC LIMIT 1');
+        return ['version' => $r ? (int) $r['id'] : 0, 'publishedAt' => $r['created_at'] ?? null, 'content' => $r ? json_decode($r['data'], true) : null];
+    }
+    if ($what === 'health' && $method === 'GET') {
+        return ['ok' => true, 'schema' => (int) scalar("SELECT v FROM settings WHERE k = 'schema_version'"), 'storage' => ensure_storage()];
+    }
+    throw new HttpError(404, 'Not found.');
 }
 
 function route(string $method, array $p): mixed
@@ -99,6 +132,19 @@ function route(string $method, array $p): mixed
                 return delete_row('sales', $id);
             }
             break;
+
+        // ---------- website content, photos and visitors
+        case $a === 'cms':
+            return route_cms($method, $p);
+
+        case $a === 'media':
+            return route_media($method, $id);
+
+        case $a === 'analytics' && $method === 'GET':
+            return route_analytics($p[1] ?? '');
+
+        case $a === 'storage' && $method === 'GET':
+            return storage_status();
 
         // ---------- bulk Amazon import
         case $a === 'amazon_orders' && ($p[1] ?? '') === 'import' && $method === 'POST':
