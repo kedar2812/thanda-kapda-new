@@ -83,7 +83,7 @@ The business used to run on a single-page app on Netlify that kept everything
 as one JSON object in Supabase. **Settings → Move from the old dashboard**
 (owners only, also offered on an empty Overview) brings it all over:
 
-1. In the old dashboard, Settings → **Export backup** downloads a `.json` file.
+1. In the old dashboard, **⬇ Backup** (top right) downloads a `.json` file.
 2. Choose it here. The server runs the whole import inside a transaction,
    works out the figures the old app showed **with its own formulas**, sets
    them beside ours, and rolls back: a preview with nothing changed.

@@ -50,7 +50,7 @@ export function LegacyImportSheet({ open, onClose }: { open: boolean; onClose: (
     try {
       json = JSON.parse(await f.text())
     } catch {
-      return setError('That file isn’t a backup — it should be the .json file the old dashboard’s “Export backup” button downloads.')
+      return setError('That file isn’t a backup — it should be the .json file the old dashboard’s “Backup” button downloads.')
     }
     setBusy('reading')
     try {
@@ -106,7 +106,7 @@ export function LegacyImportSheet({ open, onClose }: { open: boolean; onClose: (
                 Open the old dashboard at{' '}
                 <a href={OLD_DASHBOARD_URL} target="_blank" rel="noreferrer" className="font-medium text-accent">thanda-kapda.netlify.app</a> and sign in.
               </li>
-              <li>Go to <b className="text-label">Settings</b> and press <b className="text-label">Export backup</b>. A .json file downloads.</li>
+              <li>Press <b className="text-label">Backup</b> at the top right. A .json file downloads.</li>
               <li>Choose that file here. You’ll see a preview first — nothing changes until you confirm.</li>
             </ol>
             <input ref={input} type="file" accept="application/json,.json" hidden onChange={(e) => { if (e.target.files?.[0]) read(e.target.files[0]); e.target.value = '' }} />

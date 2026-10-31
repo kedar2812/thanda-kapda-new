@@ -1,6 +1,6 @@
 <?php
 // Moving over from the old dashboard (thanda-kapda.netlify.app). That app kept
-// the whole business as one JSON object; its Settings → "Export backup" button
+// the whole business as one JSON object; its "⬇ Backup" button (top right)
 // downloads it. Uploading that file here maps every record onto these tables,
 // then works out the figures the old app showed (with its own formulas) and
 // sets them beside ours, so the owner can see nothing was lost.
@@ -108,7 +108,7 @@ function legacy_payload(mixed $file): array
     }
     $known = ['sales', 'expenses', 'amazon', 'gstPurchase', 'gstSales', 'samples', 'stock'];
     if (!is_array($file) || !array_filter($known, fn ($k) => isset($file[$k]) && is_array($file[$k]))) {
-        throw new HttpError(422, 'This doesn’t look like a backup from the old dashboard. In the old dashboard open Settings and press “Export backup”, then choose that file.', 'validation');
+        throw new HttpError(422, 'This doesn’t look like a backup from the old dashboard. In the old dashboard press “Backup” at the top right, then choose the file it downloads.', 'validation');
     }
     return $file;
 }
