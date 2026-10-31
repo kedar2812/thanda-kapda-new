@@ -175,6 +175,13 @@
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
 
+/* A slim scroll bar in the theme's colours, with room kept for it so nothing shifts. */
+.thin-scrollbar { scrollbar-width: thin; scrollbar-color: var(--label-3) transparent; scrollbar-gutter: stable; }
+.thin-scrollbar::-webkit-scrollbar { width: 8px; }
+.thin-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.thin-scrollbar::-webkit-scrollbar-thumb { background: var(--label-3); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
+.thin-scrollbar::-webkit-scrollbar-thumb:hover { background-color: var(--label-2); }
+
 @media (prefers-reduced-transparency: reduce) {
   .chrome { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
 }

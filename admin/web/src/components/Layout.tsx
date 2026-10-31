@@ -63,7 +63,7 @@ function Sidebar() {
           <div className="text-[0.75rem] text-label-2">Business dashboard</div>
         </div>
       </div>
-      <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto no-scrollbar">
+      <nav className="thin-scrollbar -mr-2 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto pr-1">
         {NAV.map((n) => (
           <Fragment key={n.to}>
           {n.group && <div className="mt-4 mb-1 px-2.5 text-[0.6875rem] font-semibold uppercase tracking-[0.06em] text-label-3">{n.group}</div>}
