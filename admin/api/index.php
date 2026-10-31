@@ -7,11 +7,13 @@ declare(strict_types=1);
 require __DIR__ . '/src/core.php';
 require __DIR__ . '/src/entities.php';
 require __DIR__ . '/src/sales.php';
+require __DIR__ . '/src/gst.php';
 require __DIR__ . '/src/reports.php';
 require __DIR__ . '/src/backup.php';
 require __DIR__ . '/src/migrate.php';
 require __DIR__ . '/src/cms.php';
 require __DIR__ . '/src/analytics.php';
+require __DIR__ . '/src/legacy.php';
 
 error_reporting(E_ALL);
 ini_set('display_errors', '0');
@@ -97,8 +99,11 @@ function route(string $method, array $p): mixed
 
         case $a === 'activity' && $method === 'GET':
             $limit = min(500, max(1, (int) ($_GET['limit'] ?? 200)));
-            return array_map(fn ($r) => ['id' => (int) $r['id'], 'at' => $r['at'], 'user' => $r['name'], 'action' => $r['action'], 'entity' => $r['entity'], 'entity_id' => $r['entity_id'] === null ? null : (int) $r['entity_id'], 'summary' => $r['summary']],
-                rows("SELECT a.*, u.name FROM activity_log a LEFT JOIN users u ON u.id = a.user_id ORDER BY a.id DESC LIMIT $limit"));
+            // History brought over from the old dashboard names its user by email.
+            return array_map(fn ($r) => ['id' => (int) $r['id'], 'at' => $r['at'], 'user' => $r['name'] ?? $r['legacy_user'], 'action' => $r['action'], 'entity' => $r['entity'], 'entity_id' => $r['entity_id'] === null ? null : (int) $r['entity_id'], 'summary' => $r['summary']],
+                rows("SELECT a.id, a.at, a.action, a.entity, a.entity_id, a.summary, u.name,
+                             CASE WHEN a.entity = 'legacy' THEN JSON_UNQUOTE(JSON_EXTRACT(a.data, '$.user')) END AS legacy_user
+                      FROM activity_log a LEFT JOIN users u ON u.id = a.user_id ORDER BY a.at DESC, a.id DESC LIMIT $limit"));
 
         case $a === 'backup' && $method === 'GET':
             return make_backup();
@@ -146,6 +151,20 @@ function route(string $method, array $p): mixed
         case $a === 'storage' && $method === 'GET':
             return storage_status();
 
+        // ---------- moving over from the old Netlify dashboard
+        case $a === 'legacy' && ($p[1] ?? '') === 'import' && $method === 'POST':
+            require_owner();
+            return import_legacy(input());
+
+        case $a === 'legacy' && ($p[1] ?? '') === 'status' && $method === 'GET':
+            return ['last' => json_decode((string) scalar("SELECT v FROM settings WHERE k = 'legacy_import'"), true)];
+
+        case $a === 'gst_sales' && $method === 'GET' && !$id:
+            return list_gst_sales();
+
+        case $a === 'gst_sales' && in_array($method, ['PUT', 'DELETE'], true) && $id && scalar('SELECT auto FROM gst_sales WHERE id = ?', [$id]):
+            throw new HttpError(422, 'This entry follows its sale or Amazon order. Change that instead and this updates by itself.', 'validation');
+
         // ---------- bulk Amazon import
         case $a === 'amazon_orders' && ($p[1] ?? '') === 'import' && $method === 'POST':
             return import_amazon(input()['rows'] ?? []);
@@ -159,14 +178,14 @@ function route(string $method, array $p): mixed
                 return restore_master($a, $id);
             }
             if ($method === 'POST' && !$id) {
-                $data = clean_payload($a, input());
+                $data = tidy_payload($a, clean_payload($a, input()));
                 check_rules($a, $data, null);
-                return create_row($a, $data);
+                return after_save($a, create_row($a, $data));
             }
             if ($method === 'PUT' && $id) {
-                $data = clean_payload($a, input());
+                $data = tidy_payload($a, clean_payload($a, input()));
                 check_rules($a, $data, $id);
-                return update_row($a, $id, $data, input()['updated_at'] ?? null);
+                return after_save($a, update_row($a, $id, $data, input()['updated_at'] ?? null));
             }
             if ($method === 'DELETE' && $id) {
                 return delete_row($a, $id);
@@ -174,6 +193,25 @@ function route(string $method, array $p): mixed
             break;
     }
     throw new HttpError(404, 'Not found.');
+}
+
+/** Fills in values that follow from others. */
+function tidy_payload(string $table, array $d): array
+{
+    if ($table === 'todos') {
+        $d['done'] = $d['done'] ? 1 : 0;
+        $d['done_on'] = $d['done'] ? ($d['done_on'] ?? today()) : null;
+    }
+    return $d;
+}
+
+/** Keeps records that follow another one (the GST sales register) in step. */
+function after_save(string $table, array $row): array
+{
+    if ($table === 'amazon_orders') {
+        sync_amazon_gst($row['id']);
+    }
+    return $row;
 }
 
 /** Record-specific rules on top of the generic field validation. */
@@ -354,6 +392,7 @@ function import_amazon(array $rows): array
             $d += ['created_at' => $ts, 'created_by' => uid(), 'updated_at' => $ts, 'updated_by' => uid()];
             $cols = array_keys($d);
             q('INSERT INTO amazon_orders (' . implode(',', $cols) . ') VALUES (' . implode(',', array_fill(0, count($cols), '?')) . ')', array_values($d));
+            sync_amazon_gst((int) db()->lastInsertId());
             $added++;
         }
         log_activity('imported', 'amazon_orders', null, "Imported $added Amazon orders from a file");

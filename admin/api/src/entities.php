@@ -34,11 +34,14 @@ function entities(): array
             'fields' => [
                 'date' => ['date!', 'Date'],
                 'party' => ['str!', 'Customer'],
+                'invoice_no' => ['str', 'Invoice no.'],
+                'gstin' => ['str', 'Customer GSTIN'],
                 'design_id' => ['fk:designs', 'Design'],
                 'location_id' => ['fk:locations', 'Stock taken from'],
                 'quantity' => ['int', 'Quantity'],
                 'price' => ['money', 'Price per piece'],
                 'freight' => ['money', 'Freight'],
+                'gst_rate' => ['money', 'GST rate'],
                 'person_id' => ['fk:people', 'Handled by'],
                 'notes' => ['text', 'Notes'],
             ],
@@ -79,6 +82,7 @@ function entities(): array
                 'city' => ['str', 'City'],
                 'status' => ['enum:Shipment|Cancel|Refund!', 'Status'],
                 'invoice_no' => ['str', 'Invoice no.'],
+                'gstin' => ['str', 'Customer GSTIN'],
                 'design_id' => ['fk:designs', 'Design'],
                 'location_id' => ['fk:locations', 'Shipped from'],
                 'quantity' => ['int', 'Quantity'],
@@ -101,6 +105,7 @@ function entities(): array
         ],
         'gst_purchases' => [
             'label' => 'GST purchase',
+            'defaults' => ['paid' => 'Pending'],
             'describe' => fn ($r) => "{$r['supplier']} · inv {$r['invoice_no']}",
             'fields' => [
                 'date' => ['date!', 'Date'],
@@ -110,6 +115,8 @@ function entities(): array
                 'taxable' => ['money', 'Taxable value'],
                 'gst' => ['money', 'GST amount'],
                 'total' => ['money', 'Total'],
+                'paid' => ['enum:Pending|Paid', 'Bill status'],
+                'remarks' => ['text', 'Remarks'],
             ],
         ],
         'gst_sales' => [
@@ -124,6 +131,7 @@ function entities(): array
                 'gst' => ['money', 'GST amount'],
                 'total' => ['money', 'Total'],
                 'sale_id' => ['fk:sales', 'Linked sale'],
+                'remarks' => ['text', 'Remarks'],
             ],
         ],
         'account_entries' => [
@@ -160,6 +168,20 @@ function entities(): array
                 'quantity' => ['int!', 'Quantity'],
                 'reason' => ['str!', 'Reason'],
                 'note' => ['text', 'Note'],
+            ],
+        ],
+        'todos' => [
+            'label' => 'Task',
+            'defaults' => ['priority' => 'Medium'],
+            'describe' => fn ($r) => $r['title'] . ($r['assignee'] ? " · {$r['assignee']}" : ''),
+            'fields' => [
+                'title' => ['str!', 'Task'],
+                'assignee' => ['str', 'Assigned to'],
+                'priority' => ['enum:High|Medium|Low', 'Priority'],
+                'due' => ['date', 'Due date'],
+                'notes' => ['text', 'Notes'],
+                'done' => ['int', 'Done'],
+                'done_on' => ['date', 'Completed on'],
             ],
         ],
         'stock_transfers' => [
@@ -215,7 +237,7 @@ function cast_row(string $table, array $row): array
         if ($v === null) {
             continue;
         }
-        if ($k === 'id' || $k === 'created_by' || $k === 'updated_by' || $k === 'archived' || $k === 'sale_id') {
+        if (in_array($k, ['id', 'created_by', 'updated_by', 'archived', 'sale_id', 'amazon_order_id', 'auto', 'gst_sync', 'done'], true)) {
             $row[$k] = (int) $v;
             continue;
         }
@@ -229,8 +251,10 @@ function cast_row(string $table, array $row): array
             $row[$k] = round((float) $v, 2);
         }
     }
-    if (isset($row['archived'])) {
-        $row['archived'] = (bool) $row['archived'];
+    foreach (['archived', 'auto', 'done', 'gst_sync'] as $flag) {
+        if (isset($row[$flag])) {
+            $row[$flag] = (bool) $row[$flag];
+        }
     }
     return $row;
 }
@@ -241,6 +265,7 @@ function cast_row(string $table, array $row): array
 function clean_payload(string $table, array $in): array
 {
     $fields = entity($table)['fields'];
+    $defaults = entity($table)['defaults'] ?? [];
     $out = [];
     $missing = [];
     $problems = [];
@@ -259,7 +284,7 @@ function clean_payload(string $table, array $in): array
             if ($required) {
                 $missing[] = $label;
             }
-            $out[$col] = in_array($kind, ['int', 'money'], true) && !in_array($col, ['low_stock'], true) ? 0 : null;
+            $out[$col] = $defaults[$col] ?? (in_array($kind, ['int', 'money'], true) && !in_array($col, ['low_stock'], true) ? 0 : null);
             continue;
         }
 
@@ -323,7 +348,11 @@ function clean_payload(string $table, array $in): array
 function list_rows(string $table): array
 {
     entity($table);
-    $order = in_array($table, MASTER_TABLES, true) ? 'archived, sort, name' : 'date DESC, id DESC';
+    $order = match (true) {
+        in_array($table, MASTER_TABLES, true) => 'archived, sort, name',
+        $table === 'todos' => 'done, due IS NULL, due, id DESC',
+        default => 'date DESC, id DESC',
+    };
     return array_map(fn ($r) => cast_row($table, $r), rows("SELECT * FROM $table ORDER BY $order"));
 }
 
@@ -393,7 +422,11 @@ function delete_row(string $table, int $id): array
 
     if ($table === 'sales') {
         $row['payments'] = rows('SELECT * FROM sale_payments WHERE sale_id = ?', [$id]);
+        q('DELETE FROM gst_sales WHERE sale_id = ? AND auto = 1', [$id]);
         q('UPDATE gst_sales SET sale_id = NULL WHERE sale_id = ?', [$id]);
+    }
+    if ($table === 'amazon_orders') {
+        q('DELETE FROM gst_sales WHERE amazon_order_id = ? AND auto = 1', [$id]);
     }
     q("DELETE FROM $table WHERE id = ?", [$id]);
     log_activity('deleted', $table, $id, describe($table, $row), $row);

@@ -3,7 +3,8 @@ import { useQuery } from '@tanstack/react-query'
 import { Activity as ActivityIcon, Archive, ImagePlus, Pencil, Plus, RotateCcw, Send, Trash2, Undo2, Upload } from 'lucide-react'
 import { Page } from '@/components/Layout'
 import { matches } from '@/components/common'
-import { Empty, Group, Loading, Row, SearchField, cx } from '@/components/ui'
+import { Toolbar } from '@/components/common'
+import { Empty, Group, Loading, Row, SearchField, Segmented, cx } from '@/components/ui'
 import { get } from '@/lib/api'
 import { date, relative } from '@/lib/format'
 import type { Activity } from '@/lib/types'
@@ -21,10 +22,16 @@ const ICONS: Record<string, { icon: typeof Plus; tone: string }> = {
   discarded: { icon: Undo2, tone: 'bg-orange-soft text-orange' },
 }
 
+type ActionFilter = 'all' | 'added' | 'edited' | 'removed'
+
 export default function ActivityPage() {
   const { data, isLoading } = useQuery({ queryKey: ['list', 'activity'], queryFn: () => get<Activity[]>('activity?limit=500') })
   const [q, setQ] = useState('')
-  const shown = useMemo(() => (data ?? []).filter((a) => matches(q, a.summary, a.user, a.action)), [data, q])
+  const [action, setAction] = useState<ActionFilter>('all')
+  const shown = useMemo(
+    () => (data ?? []).filter((a) => (action === 'all' || (action === 'removed' ? ['deleted', 'archived'].includes(a.action) : a.action === action)) && matches(q, a.summary, a.user, a.action)),
+    [data, q, action],
+  )
   const byDay = useMemo(() => {
     const groups: { day: string; items: Activity[] }[] = []
     for (const a of shown) {
@@ -36,7 +43,16 @@ export default function ActivityPage() {
   }, [shown])
 
   return (
-    <Page title="Activity" subtitle="Who added, changed or deleted what — newest first." toolbar={<div className="md:w-80"><SearchField value={q} onChange={setQ} placeholder="Search activity" /></div>}>
+    <Page
+      title="Activity"
+      subtitle="Who added, changed or deleted what — newest first. Includes the old dashboard’s audit trail once it’s brought over."
+      toolbar={
+        <Toolbar>
+          <div className="md:w-80"><SearchField value={q} onChange={setQ} placeholder="Search activity, person or screen" /></div>
+          <Segmented<ActionFilter> value={action} onChange={setAction} options={[{ value: 'all', label: 'All' }, { value: 'added', label: 'Added' }, { value: 'edited', label: 'Edited' }, { value: 'removed', label: 'Deleted' }]} className="md:w-80" />
+        </Toolbar>
+      }
+    >
       {isLoading ? (
         <Loading />
       ) : !shown.length ? (

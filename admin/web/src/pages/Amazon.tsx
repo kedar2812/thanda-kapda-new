@@ -55,12 +55,14 @@ function Orders({ onOpen, onNew }: { onOpen: (o: AmazonOrder) => void; onNew: ()
   const [status, setStatus] = useState<StatusFilter>('all')
   const range = useDateRange()
 
-  const inRange = useMemo(() => (data ?? []).filter((o) => range.inRange(o.date) && matches(q, o.order_id, o.customer, o.city, o.invoice_no, names.name('designs', o.design_id))), [data, q, range, names])
+  const inRange = useMemo(() => (data ?? []).filter((o) => range.inRange(o.date) && matches(q, o.order_id, o.customer, o.city, o.invoice_no, o.gstin, names.name('designs', o.design_id))), [data, q, range, names])
   const shown = inRange.filter((o) => status === 'all' || o.status === status)
   const shipped = inRange.filter((o) => o.status === 'Shipment')
+  const refunded = inRange.filter((o) => o.status === 'Refund')
+  const sum = (list: AmazonOrder[], k: 'invoice_amount' | 'tax') => list.reduce((a, o) => a + o[k], 0)
 
   const exportCsv = () =>
-    downloadCsv('amazon-orders.csv', ['Date', 'Order ID', 'Customer', 'City', 'Status', 'Invoice no.', 'Design', 'Location', 'Quantity', 'Taxable value', 'Total tax', 'Invoice amount'], shown.map((o) => [o.date, o.order_id, o.customer, o.city, o.status, o.invoice_no, names.name('designs', o.design_id), names.name('locations', o.location_id), o.quantity, o.taxable, o.tax, o.invoice_amount]))
+    downloadCsv('amazon-orders.csv', ['Date', 'Order ID', 'Customer', 'City', 'Status', 'Invoice no.', 'Customer GSTIN', 'Design', 'Location', 'Quantity', 'Taxable value', 'Total tax', 'Invoice amount'], shown.map((o) => [o.date, o.order_id, o.customer, o.city, o.status, o.invoice_no, o.gstin, names.name('designs', o.design_id), names.name('locations', o.location_id), o.quantity, o.taxable, o.tax, o.invoice_amount]))
 
   return (
     <>
@@ -73,8 +75,8 @@ function Orders({ onOpen, onNew }: { onOpen: (o: AmazonOrder) => void; onNew: ()
       <StatGrid>
         <Stat label="Orders" value={qty(inRange.length)} />
         <Stat label="Shipped" value={qty(shipped.length)} />
-        <Stat label="Net revenue" value={money(shipped.reduce((a, o) => a + o.invoice_amount, 0))} tone="green" sub="Invoice amount, shipped only" />
-        <Stat label="Tax on shipped" value={money(shipped.reduce((a, o) => a + o.tax, 0))} />
+        <Stat label="Net revenue" value={money(sum(shipped, 'invoice_amount') - sum(refunded, 'invoice_amount'))} tone="green" sub={refunded.length ? `Shipped, less ${money(sum(refunded, 'invoice_amount'))} refunded` : 'Invoice amount, shipped orders'} />
+        <Stat label="Tax (GST)" value={money(sum(shipped, 'tax') - sum(refunded, 'tax'))} sub="Shipped, less refunds" />
       </StatGrid>
       {isLoading ? (
         <Loading />
@@ -127,7 +129,7 @@ function Payouts({ onOpen }: { onOpen: (p: AmazonSettlement) => void }) {
 }
 
 function OrderForm({ order, open, onDone }: { order: AmazonOrder | null; open: boolean; onDone: () => void }) {
-  const f = useRecordForm(toValues(order, { date: todayISO(), order_id: '', customer: '', city: '', status: 'Shipment', invoice_no: '', design_id: '', location_id: '', quantity: '', taxable: '', tax: '', invoice_amount: '' }), {
+  const f = useRecordForm(toValues(order, { date: todayISO(), order_id: '', customer: '', city: '', status: 'Shipment', invoice_no: '', gstin: '', design_id: '', location_id: '', quantity: '', taxable: '', tax: '', invoice_amount: '' }), {
     table: 'amazon_orders',
     saved: order ? 'Order updated' : 'Order saved',
     onDone,
@@ -147,7 +149,7 @@ function OrderForm({ order, open, onDone }: { order: AmazonOrder | null; open: b
       <div className="space-y-5 pt-1">
         <FormError error={f.error} />
         <Segmented value={v.status} onChange={(x) => f.set('status', x)} options={[{ value: 'Shipment', label: 'Shipped' }, { value: 'Cancel', label: 'Cancelled' }, { value: 'Refund', label: 'Refunded' }]} />
-        {v.status !== 'Shipment' && <p className="px-1 text-[0.8125rem] text-label-2">Cancelled and refunded orders don’t take stock.</p>}
+        {v.status !== 'Shipment' && <p className="px-1 text-[0.8125rem] text-label-2">Cancelled and refunded orders don’t take stock. A refund is taken off revenue and off GST collected.</p>}
         <FormGrid>
           <Field label="Order ID" required><TextInput value={v.order_id} onChange={(e) => f.set('order_id', e.target.value)} placeholder="408-1234567-1234567" className="num" /></Field>
           <Field label="Date" required><DateInput value={v.date} onChange={(e) => f.set('date', e.target.value)} /></Field>
@@ -157,10 +159,12 @@ function OrderForm({ order, open, onDone }: { order: AmazonOrder | null; open: b
           <MasterSelect table="locations" label="Shipped from" value={v.location_id} onChange={(x) => f.set('location_id', x)} />
           <Field label="Quantity"><NumberInput decimal={false} value={v.quantity} onChange={(x) => f.set('quantity', x)} placeholder="0" /></Field>
           <Field label="Invoice no."><TextInput value={v.invoice_no} onChange={(e) => f.set('invoice_no', e.target.value)} /></Field>
+          <Field label="Customer GSTIN" hint="Only for business buyers."><TextInput value={v.gstin} onChange={(e) => f.set('gstin', e.target.value.toUpperCase())} placeholder="Optional" className="num uppercase" maxLength={15} /></Field>
           <Field label="Taxable value"><NumberInput prefix="₹" value={v.taxable} onChange={(x) => setTaxable('taxable', x)} placeholder="0.00" /></Field>
           <Field label="Total tax"><NumberInput prefix="₹" value={v.tax} onChange={(x) => setTaxable('tax', x)} placeholder="0.00" /></Field>
           <Field label="Invoice amount" hint="Fills in from taxable value + tax; you can change it."><NumberInput prefix="₹" value={v.invoice_amount} onChange={(x) => f.set('invoice_amount', x)} placeholder="0.00" /></Field>
         </FormGrid>
+        {(!order || order.gst_sync) && num(v.tax) > 0 && v.status !== 'Cancel' && <p className="px-1 text-[0.8125rem] text-label-2">The GST sales register gets a line for this order by itself.</p>}
         {f.isEdit && <DeleteButton label="Delete order" onClick={() => f.remove('order')} disabled={f.busy} />}
       </div>
     </Sheet>

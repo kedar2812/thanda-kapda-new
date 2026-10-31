@@ -1,11 +1,26 @@
 <?php
 // Direct sales carry a list of payments (instalments), each into an account.
+// A sale can carry GST: the customer owes goods + freight + GST.
 
 declare(strict_types=1);
 
-function sale_total(array $s): float
+const GST_RATES = [0, 3, 5, 12, 18, 28];
+
+/** Goods + freight, before GST. */
+function sale_subtotal(array $s): float
 {
     return round($s['quantity'] * $s['price'] + $s['freight'], 2);
+}
+
+function sale_gst(array $s): float
+{
+    return round(sale_subtotal($s) * (float) ($s['gst_rate'] ?? 0) / 100, 2);
+}
+
+/** What the customer owes, including GST. */
+function sale_total(array $s): float
+{
+    return round(sale_subtotal($s) + sale_gst($s), 2);
 }
 
 function enrich_sales(array $sales): array
@@ -26,6 +41,8 @@ function enrich_sales(array $sales): array
     }
     foreach ($sales as &$s) {
         $s['payments'] = $byId[$s['id']] ?? [];
+        $s['subtotal'] = sale_subtotal($s);
+        $s['gst'] = sale_gst($s);
         $s['total'] = sale_total($s);
         $s['received'] = round(array_sum(array_column($s['payments'], 'amount')), 2);
         $s['balance'] = round($s['total'] - $s['received'], 2);
@@ -73,6 +90,9 @@ function save_sale(?int $id): array
 {
     $in = input();
     $data = clean_payload('sales', $in);
+    if (!in_array((float) $data['gst_rate'], array_map('floatval', GST_RATES), true)) {
+        throw new HttpError(422, 'Please choose a GST rate of ' . implode(', ', array_slice(GST_RATES, 1)) . '% or none.', 'validation');
+    }
     $payments = clean_payments($in);
 
     $total = sale_total($data);
@@ -96,6 +116,7 @@ function save_sale(?int $id): array
                 [$sale['id'], $p['date'], $p['amount'], $p['account_id'], $ts, uid(), $ts, uid()]
             );
         }
+        sync_sale_gst($sale['id']);
         db()->commit();
     } catch (Throwable $e) {
         db()->rollBack();

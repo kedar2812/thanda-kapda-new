@@ -9,12 +9,12 @@ const BACKUP_TABLES = [
     'settings', 'designs', 'locations', 'accounts', 'categories', 'people',
     'sales', 'sale_payments', 'samples', 'expenses', 'amazon_orders', 'amazon_settlements',
     'gst_purchases', 'gst_sales', 'account_entries', 'account_transfers',
-    'stock_adjustments', 'stock_transfers',
+    'stock_adjustments', 'stock_transfers', 'todos',
     'cms_revisions', 'cms_draft', 'cms_media',
 ];
 
 // Added after the first backups were made: a backup without them leaves them as they are.
-const BACKUP_OPTIONAL = ['cms_revisions', 'cms_draft', 'cms_media'];
+const BACKUP_OPTIONAL = ['cms_revisions', 'cms_draft', 'cms_media', 'todos'];
 
 // Internal settings that belong to this server, not to the business data.
 const SETTINGS_KEPT = ['schema_version', 'analytics_salt'];

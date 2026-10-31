@@ -23,6 +23,7 @@ const Settings = lazy(() => import('@/pages/Settings'))
 const Website = lazy(() => import('@/pages/Website'))
 const Photos = lazy(() => import('@/pages/Photos'))
 const Analytics = lazy(() => import('@/pages/Analytics'))
+const Todos = lazy(() => import('@/pages/Todos'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -88,6 +89,7 @@ function Authed() {
           <Route path="amazon" element={<Lazy><Amazon /></Lazy>} />
           <Route path="samples" element={<Lazy><Samples /></Lazy>} />
           <Route path="gst" element={<Lazy><Gst /></Lazy>} />
+          <Route path="todos" element={<Lazy><Todos /></Lazy>} />
           <Route path="activity" element={<Lazy><ActivityPage /></Lazy>} />
           <Route path="settings" element={<Lazy><Settings /></Lazy>} />
           <Route path="website" element={<Lazy><Website /></Lazy>} />

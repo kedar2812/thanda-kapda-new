@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router'
 import { Plus, ShoppingBag, Trash2 } from 'lucide-react'
 import { Page } from '@/components/Layout'
 import { Sheet } from '@/components/Sheet'
@@ -16,6 +15,8 @@ import type { Sale, StockGrid } from '@/lib/types'
 import { todayISO } from '@/lib/format'
 
 type Filter = 'all' | 'unpaid' | 'paid'
+
+const GST_RATES = [0, 5, 12, 18]
 
 export function SaleStatus({ s }: { s: Sale }) {
   if (s.status === 'paid') return <Badge tone="green">Paid</Badge>
@@ -48,13 +49,14 @@ export default function SalesPage() {
         (s) =>
           range.inRange(s.date) &&
           (filter === 'all' || (filter === 'paid' ? s.status === 'paid' : s.status !== 'paid')) &&
-          matches(q, s.party, names.name('designs', s.design_id), names.name('people', s.person_id), s.notes),
+          matches(q, s.party, s.invoice_no, s.gstin, names.name('designs', s.design_id), names.name('people', s.person_id), s.notes),
       ),
     [sales, q, filter, range, names],
   )
   const totals = useMemo(
     () => ({
       total: shown.reduce((a, s) => a + s.total, 0),
+      gst: shown.reduce((a, s) => a + s.gst, 0),
       received: shown.reduce((a, s) => a + s.received, 0),
       due: shown.reduce((a, s) => a + Math.max(0, s.balance), 0),
     }),
@@ -64,8 +66,8 @@ export default function SalesPage() {
   const exportCsv = () =>
     downloadCsv(
       'sales.csv',
-      ['Date', 'Customer', 'Design', 'Location', 'Quantity', 'Price per piece', 'Freight', 'Total', 'Received', 'Balance due', 'Status', 'Handled by', 'Notes'],
-      shown.map((s) => [s.date, s.party, names.name('designs', s.design_id), names.name('locations', s.location_id), s.quantity, s.price, s.freight, s.total, s.received, s.balance, s.status, names.name('people', s.person_id), s.notes]),
+      ['Date', 'Invoice no.', 'Customer', 'Customer GSTIN', 'Design', 'Location', 'Quantity', 'Price per piece', 'Freight', 'Before GST', 'GST %', 'GST', 'Total', 'Received', 'Balance due', 'Status', 'Handled by', 'Notes'],
+      shown.map((s) => [s.date, s.invoice_no, s.party, s.gstin, names.name('designs', s.design_id), names.name('locations', s.location_id), s.quantity, s.price, s.freight, s.subtotal, s.gst_rate, s.gst, s.total, s.received, s.balance, s.status, names.name('people', s.person_id), s.notes]),
     )
 
   return (
@@ -80,7 +82,7 @@ export default function SalesPage() {
       toolbar={
         <Toolbar>
           <div className="md:w-72">
-            <SearchField value={q} onChange={setQ} placeholder="Customer, design or person" />
+            <SearchField value={q} onChange={setQ} placeholder="Customer, invoice, GSTIN, design" />
           </div>
           <Segmented<Filter>
             value={filter}
@@ -97,7 +99,7 @@ export default function SalesPage() {
       }
     >
       <StatGrid className="lg:grid-cols-3">
-        <Stat label="Sales" value={money(totals.total)} sub={`${shown.length} ${shown.length === 1 ? 'sale' : 'sales'}`} />
+        <Stat label="Sales" value={money(totals.total)} sub={`${shown.length} ${shown.length === 1 ? 'sale' : 'sales'}${totals.gst ? ` · incl. ${money(totals.gst)} GST` : ''}`} />
         <Stat label="Money received" value={money(totals.received)} tone="green" />
         <Stat label="Still to collect" value={money(totals.due)} tone={totals.due > 0 ? 'red' : undefined} className="col-span-2 lg:col-span-1" />
       </StatGrid>
@@ -119,7 +121,7 @@ export default function SalesPage() {
                 key={s.id}
                 onClick={() => setEditing(s)}
                 title={s.party}
-                subtitle={`${date(s.date)} · ${s.design_id ? names.name('designs', s.design_id) : 'No design'} · ${qty(s.quantity)} pcs`}
+                subtitle={`${date(s.date)}${s.invoice_no ? ` · Inv ${s.invoice_no}` : ''} · ${s.design_id ? names.name('designs', s.design_id) : 'No design'} · ${qty(s.quantity)} pcs${s.gst_rate ? ` · ${s.gst_rate}% GST` : ''}`}
                 trailing={money(s.total)}
                 trailingSub={<SaleStatus s={s} />}
               />
@@ -141,13 +143,12 @@ interface PaymentRow { key: number; date: string; amount: string; account_id: st
 
 function SaleForm({ sale, open, onDone }: { sale: Sale | null; open: boolean; onDone: () => void }) {
   const names = useNames()
-  const navigate = useNavigate()
   const { data: grid } = useReport<StockGrid>('stock')
   const { data: allSales } = useList<Sale>('sales')
   const [payments, setPayments] = useState<PaymentRow[]>(
     (sale?.payments ?? []).map((p, i) => ({ key: i, date: p.date, amount: String(p.amount), account_id: String(p.account_id) })),
   )
-  const f = useRecordForm(toValues(sale, { date: todayISO(), party: '', design_id: '', location_id: '', quantity: '', price: '', freight: '', person_id: '', notes: '' }), {
+  const f = useRecordForm(toValues(sale, { date: todayISO(), party: '', invoice_no: '', gstin: '', design_id: '', location_id: '', quantity: '', price: '', freight: '', gst_rate: '0', person_id: '', notes: '' }), {
     table: 'sales',
     saved: sale ? 'Sale updated' : 'Sale saved',
     extra: () => ({ payments: payments.map(({ date, amount, account_id }) => ({ date, amount, account_id })) }),
@@ -155,7 +156,9 @@ function SaleForm({ sale, open, onDone }: { sale: Sale | null; open: boolean; on
   })
   const v = f.values
 
-  const total = num(v.quantity) * num(v.price) + num(v.freight)
+  const subtotal = num(v.quantity) * num(v.price) + num(v.freight)
+  const gst = Math.round(subtotal * num(v.gst_rate)) / 100
+  const total = subtotal + gst
   const received = payments.reduce((a, p) => a + num(p.amount), 0)
   const balance = total - received
 
@@ -201,6 +204,29 @@ function SaleForm({ sale, open, onDone }: { sale: Sale | null; open: boolean; on
         </Field>
         <MasterSelect table="people" label="Handled by" value={v.person_id} onChange={(x) => f.set('person_id', x)} />
       </FormGrid>
+
+      {/* GST */}
+      <section>
+        <h3 className="mb-2 px-1 text-[0.8125rem] font-medium uppercase tracking-[0.04em] text-label-2">GST</h3>
+        <Segmented
+          value={String(num(v.gst_rate))}
+          onChange={(x) => f.set('gst_rate', x)}
+          options={[...new Set([...GST_RATES, num(v.gst_rate)])].sort((x, y) => x - y).map((r) => ({ value: String(r), label: r ? `${r}%` : 'No GST' }))}
+        />
+        {num(v.gst_rate) > 0 && (
+          <div className="mt-3">
+            <FormGrid>
+              <Field label="Invoice no.">
+                <TextInput value={v.invoice_no} onChange={(e) => f.set('invoice_no', e.target.value)} placeholder="Optional" />
+              </Field>
+              <Field label="Customer GSTIN">
+                <TextInput value={v.gstin} onChange={(e) => f.set('gstin', e.target.value.toUpperCase())} placeholder="Optional" className="num uppercase" maxLength={15} />
+              </Field>
+            </FormGrid>
+            <p className="mt-2 px-1 text-[0.8125rem] text-label-2">The GST sales register gets a line for this sale by itself, and keeps it up to date.</p>
+          </div>
+        )}
+      </section>
 
       {stockAfter !== null && (
         stockAfter < 0 ? (
@@ -262,7 +288,9 @@ function SaleForm({ sale, open, onDone }: { sale: Sale | null; open: boolean; on
 
       {/* Totals */}
       <div className="overflow-hidden rounded-xl bg-surface-2">
-        <SummaryLine label="Total" value={money(total)} hint={total > 0 ? `${qty(num(v.quantity))} × ${money(num(v.price))}${num(v.freight) ? ` + ${money(num(v.freight))} freight` : ''}` : undefined} />
+        {gst > 0 && <SummaryLine label="Before GST" value={money(subtotal)} hint={`${qty(num(v.quantity))} × ${money(num(v.price))}${num(v.freight) ? ` + ${money(num(v.freight))} freight` : ''}`} />}
+        {gst > 0 && <SummaryLine label={`GST ${num(v.gst_rate)}%`} value={money(gst)} />}
+        <SummaryLine label="Total" value={money(total)} hint={gst === 0 && total > 0 ? `${qty(num(v.quantity))} × ${money(num(v.price))}${num(v.freight) ? ` + ${money(num(v.freight))} freight` : ''}` : undefined} />
         <SummaryLine label="Received" value={money(received)} />
         <SummaryLine label={balance < 0 ? 'Overpaid' : 'Balance due'} value={money(Math.abs(balance))} strong tone={balance > 0.004 ? 'orange' : balance < -0.004 ? 'red' : 'green'} />
       </div>
@@ -272,12 +300,7 @@ function SaleForm({ sale, open, onDone }: { sale: Sale | null; open: boolean; on
       </Field>
 
       {f.isEdit && sale && (
-        <div className="space-y-3">
-          <Button variant="gray" size="lg" className="w-full" onClick={() => navigate('/gst', { state: { fromSale: sale } })}>
-            Add to GST sales register
-          </Button>
-          <DeleteButton label="Delete sale" onClick={() => f.remove('sale', 'Stock goes back and the money received is removed from its account.')} disabled={f.busy} />
-        </div>
+        <DeleteButton label="Delete sale" onClick={() => f.remove('sale', 'Stock goes back, the money received is removed from its account, and its GST sales line goes too.')} disabled={f.busy} />
       )}
     </div>
     </Sheet>

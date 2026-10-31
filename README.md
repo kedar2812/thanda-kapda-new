@@ -10,8 +10,8 @@ dashboard at admin.thandakapda.co that runs the business **and the website**.
   CSS v4, GSAP 3 (ScrollTrigger + SplitText) and Lenis. Two self-hosted fonts:
   Fraunces and Hanken Grotesk. Hosted as plain files on Apache shared hosting.
 - **Dashboard:** React 19 + Vite front end (`admin/web`), PHP 8.1+ API
-  (`admin/api`) and MySQL/MariaDB. Sales, stock, money, Amazon, GST, the
-  website editor and visitor analytics.
+  (`admin/api`) and MySQL/MariaDB. Sales (with GST), stock, money, Amazon,
+  GST registers, to-do list, the website editor and visitor analytics.
 
 ## Editing the website (the dashboard's Website screen)
 
@@ -77,6 +77,36 @@ Instagram and Google reviews. Bots and headless browsers are ignored. Open
 `https://thandakapda.co/?tk-ignore=1` once on your own devices to leave your
 visits out (`?tk-ignore=0` undoes it).
 
+## Moving from the old dashboard (thanda-kapda.netlify.app)
+
+The business used to run on a single-page app on Netlify that kept everything
+as one JSON object in Supabase. **Settings → Move from the old dashboard**
+(owners only, also offered on an empty Overview) brings it all over:
+
+1. In the old dashboard, Settings → **Export backup** downloads a `.json` file.
+2. Choose it here. The server runs the whole import inside a transaction,
+   works out the figures the old app showed **with its own formulas**, sets
+   them beside ours, and rolls back: a preview with nothing changed.
+3. **Bring it all over** downloads a backup of what's here, then replaces the
+   business data (logins, website content and visitor stats stay).
+
+How it maps (`admin/api/src/legacy.php`):
+
+- Stock in the old app was numbers edited by hand. An "Opening stock" entry
+  per design and place, dated the day before the first record, makes every
+  count land exactly on the old number.
+- Money recorded without an account (most of the old Excel rows) sits in an
+  archived "Not specified (old dashboard)" account, zeroed by one correction,
+  so balances match the old app, which left it out. Choosing the real account
+  on a sale or expense moves the money there.
+- Free-text people become People when they look like names; anything else is
+  kept in the record's notes. Rows with no date take the date of the same
+  Amazon order, or of the row next to them.
+- GST sales lines the old app generated are rebuilt from their sale or order
+  and keep following it. The old audit trail joins Activity with its users.
+- Anything adjusted to fit (e.g. a price typed in the freight column) is
+  listed under "Good to know"; nothing is dropped silently.
+
 ## Run it locally
 
 ```bash
@@ -98,6 +128,7 @@ API, start it with `NEXT_PUBLIC_ADMIN_URL=http://127.0.0.1:8081`.
 # API, on an EMPTY scratch database (they create a test owner):
 node admin/api/tests/acceptance.mjs http://127.0.0.1:8081
 node admin/api/tests/website.mjs   http://127.0.0.1:8081   # content, photos, analytics, backups
+node admin/api/tests/legacy.mjs    http://127.0.0.1:8081 old-backup.json   # import from the old dashboard (replaces data)
 
 npx jiti scripts/check-content-schema.ts                  # every content value is editable
 node tests/e2e/run.mjs <screenshot folder>                # real browser; see the header of the file

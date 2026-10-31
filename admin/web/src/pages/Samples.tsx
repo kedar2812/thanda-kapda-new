@@ -24,7 +24,7 @@ export default function Samples() {
   const total = shown.reduce((a, s) => a + s.quantity, 0)
   const perDesign = useMemo(() => {
     const m = new Map<number, number>()
-    shown.forEach((s) => m.set(s.design_id, (m.get(s.design_id) ?? 0) + s.quantity))
+    shown.forEach((s) => m.set(s.design_id ?? 0, (m.get(s.design_id ?? 0) ?? 0) + s.quantity))
     return [...m.entries()].sort((a, b) => b[1] - a[1])
   }, [shown])
 

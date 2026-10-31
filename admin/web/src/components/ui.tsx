@@ -72,10 +72,12 @@ export function Group({ title, footer, action, children, className }: { title?: 
 }
 
 export function Row({
-  title, subtitle, trailing, trailingSub, onClick, chevron = !!onClick, leading, className, tone,
+  title, subtitle, trailing, trailingSub, onClick, chevron = !!onClick, leading, className, tone, wrap,
 }: {
   title: ReactNode; subtitle?: ReactNode; trailing?: ReactNode; trailingSub?: ReactNode
   onClick?: () => void; chevron?: boolean; leading?: ReactNode; className?: string; tone?: 'red' | 'muted'
+  /** Let long text wrap instead of cutting it off. */
+  wrap?: boolean
 }) {
   const Tag = onClick ? 'button' : 'div'
   return (
@@ -91,8 +93,8 @@ export function Row({
       {leading}
       <div className="flex min-h-[3.25rem] min-w-0 flex-1 items-center gap-3 border-b border-separator py-2.5 pr-4 group-last:border-b-0">
         <div className="min-w-0 flex-1">
-          <div className={cx('truncate text-[0.9375rem] leading-snug', tone === 'muted' && 'text-label-2')}>{title}</div>
-          {subtitle && <div className="mt-0.5 truncate text-[0.8125rem] text-label-2">{subtitle}</div>}
+          <div className={cx(!wrap && 'truncate', 'text-[0.9375rem] leading-snug', tone === 'muted' && 'text-label-2')}>{title}</div>
+          {subtitle && <div className={cx(!wrap && 'truncate', 'mt-0.5 text-[0.8125rem] text-label-2')}>{subtitle}</div>}
         </div>
         {(trailing || trailingSub) && (
           <div className="shrink-0 text-right">

@@ -41,14 +41,22 @@ export interface Payment {
 export interface Sale extends Meta {
   date: string
   party: string
+  invoice_no: string | null
+  gstin: string | null
   design_id: number | null
   location_id: number | null
   quantity: number
   price: number
   freight: number
+  /** Percent; 0 when the sale has no GST. */
+  gst_rate: number
   person_id: number | null
   notes: string | null
   payments: Payment[]
+  /** Goods + freight, before GST. */
+  subtotal: number
+  gst: number
+  /** What the customer owes, including GST. */
   total: number
   received: number
   balance: number
@@ -58,8 +66,8 @@ export interface Sale extends Meta {
 
 export interface Sample extends Meta {
   date: string
-  design_id: number
-  location_id: number
+  design_id: number | null
+  location_id: number | null
   quantity: number
   given_to: string
   person_id: number | null
@@ -83,6 +91,9 @@ export interface AmazonOrder extends Meta {
   city: string | null
   status: 'Shipment' | 'Cancel' | 'Refund'
   invoice_no: string | null
+  gstin: string | null
+  /** Whether this order keeps a line in the GST sales register. */
+  gst_sync: boolean
   design_id: number | null
   location_id: number | null
   quantity: number
@@ -109,7 +120,42 @@ export interface GstEntry extends Meta {
   taxable: number
   gst: number
   total: number
+  remarks: string | null
+  /** Purchases: whether the supplier's bill is paid. Sales: whether the linked sale is paid. */
+  paid: 'Pending' | 'Paid' | 'Unpaid'
   sale_id?: number | null
+  amazon_order_id?: number | null
+  /** Made from a sale or Amazon order, and kept in step with it. */
+  auto?: boolean
+}
+
+export interface Todo extends Meta {
+  title: string
+  assignee: string | null
+  priority: 'High' | 'Medium' | 'Low'
+  due: string | null
+  notes: string | null
+  done: boolean
+  done_on: string | null
+}
+
+export interface LegacyFigure {
+  key: string
+  label: string
+  kind: 'money' | 'qty'
+  old: number
+  new: number
+  match: boolean
+  explain: string | null
+}
+
+export interface LegacyResult {
+  dry_run: boolean
+  counts: Record<string, number>
+  source: Record<string, number>
+  figures: LegacyFigure[]
+  notes: { area: string; text: string }[]
+  skipped: string[]
 }
 
 export interface AccountEntry extends Meta {

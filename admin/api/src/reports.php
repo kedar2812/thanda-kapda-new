@@ -33,7 +33,7 @@ function stock_movements(?int $designId = null, ?int $locationId = null): array
     foreach (rows('SELECT id, date, created_at, design_id, location_id, quantity, party FROM sales WHERE design_id IS NOT NULL AND location_id IS NOT NULL AND quantity > 0') as $r) {
         $add($r, 'sales', (int) $r['location_id'], -(int) $r['quantity'], "Sale to {$r['party']}");
     }
-    foreach (rows('SELECT id, date, created_at, design_id, location_id, quantity, given_to FROM samples') as $r) {
+    foreach (rows('SELECT id, date, created_at, design_id, location_id, quantity, given_to FROM samples WHERE design_id IS NOT NULL AND location_id IS NOT NULL') as $r) {
         $add($r, 'samples', (int) $r['location_id'], -(int) $r['quantity'], "Sample to {$r['given_to']}");
     }
     foreach (rows("SELECT id, date, created_at, design_id, location_id, quantity, order_id FROM amazon_orders
@@ -197,7 +197,8 @@ function in_range(string $date, ?string $from, ?string $to): bool
 function dashboard(?string $from, ?string $to): array
 {
     $sales = array_values(array_filter(list_sales(), fn ($s) => in_range($s['date'], $from, $to)));
-    $salesTotal = array_sum(array_column($sales, 'total'));
+    // GST collected isn't income, so sales count before GST.
+    $salesTotal = array_sum(array_column($sales, 'subtotal'));
 
     $received = 0.0;
     foreach (rows('SELECT date, amount FROM sale_payments') as $p) {
@@ -217,10 +218,10 @@ function dashboard(?string $from, ?string $to): array
 
     $amazon = 0.0;
     $amazonOrders = 0;
-    foreach (rows("SELECT date, invoice_amount FROM amazon_orders WHERE status = 'Shipment'") as $o) {
+    foreach (amazon_income() as $o) {
         if (in_range($o['date'], $from, $to)) {
-            $amazon += (float) $o['invoice_amount'];
-            $amazonOrders++;
+            $amazon += $o['amount'];
+            $amazonOrders += $o['amount'] > 0 ? 1 : 0;
         }
     }
     $fees = 0.0;
@@ -247,7 +248,7 @@ function dashboard(?string $from, ?string $to): array
     foreach ($sales as $s) {
         $k = mb_strtolower(trim($s['party']));
         $customers[$k] ??= ['party' => trim($s['party']), 'amount' => 0.0];
-        $customers[$k]['amount'] += $s['total'];
+        $customers[$k]['amount'] += $s['subtotal'];
     }
     usort($customers, fn ($a, $b) => $b['amount'] <=> $a['amount']);
 
@@ -270,6 +271,15 @@ function dashboard(?string $from, ?string $to): array
     ];
 }
 
+/** Amazon income per order: shipped orders count in, refunds count back out. */
+function amazon_income(): array
+{
+    return array_map(
+        fn ($o) => ['date' => $o['date'], 'amount' => ($o['status'] === 'Refund' ? -1 : 1) * (float) $o['invoice_amount']],
+        rows("SELECT date, status, invoice_amount FROM amazon_orders WHERE status IN ('Shipment', 'Refund')")
+    );
+}
+
 /** Last 12 months of income (direct + Amazon) against expenses. */
 function monthly_trend(): array
 {
@@ -281,13 +291,13 @@ function monthly_trend(): array
     foreach (list_sales() as $s) {
         $m = substr($s['date'], 0, 7);
         if (isset($months[$m])) {
-            $months[$m]['income'] += $s['total'];
+            $months[$m]['income'] += $s['subtotal'];
         }
     }
-    foreach (rows("SELECT date, invoice_amount FROM amazon_orders WHERE status = 'Shipment'") as $o) {
+    foreach (amazon_income() as $o) {
         $m = substr($o['date'], 0, 7);
         if (isset($months[$m])) {
-            $months[$m]['income'] += (float) $o['invoice_amount'];
+            $months[$m]['income'] += $o['amount'];
         }
     }
     foreach (rows('SELECT date, amount FROM expenses') as $e) {

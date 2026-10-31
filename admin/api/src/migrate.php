@@ -4,7 +4,7 @@
 
 declare(strict_types=1);
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 function ensure_installed(): void
 {
@@ -122,4 +122,53 @@ function migrate_2(): void
     }
     q('INSERT IGNORE INTO cms_draft (id) VALUES (1)');
     ensure_storage();
+}
+
+/** Adds a column unless it is already there (so a half-finished upgrade can be re-run). */
+function add_column(string $table, string $column, string $definition): bool
+{
+    if (scalar('SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?', [$table, $column])) {
+        return false;
+    }
+    db()->exec("ALTER TABLE $table ADD COLUMN $column $definition");
+    return true;
+}
+
+/**
+ * Everything the old Netlify dashboard kept that this one didn't: GST on direct
+ * sales, GSTINs on Amazon orders, bill status and remarks on the GST registers,
+ * GST sales kept in step with their sale or order, samples without a design,
+ * and the to-do list.
+ */
+function migrate_3(): void
+{
+    add_column('sales', 'invoice_no', 'VARCHAR(60) NULL AFTER party');
+    add_column('sales', 'gstin', 'VARCHAR(20) NULL AFTER invoice_no');
+    add_column('sales', 'gst_rate', 'DECIMAL(5,2) NOT NULL DEFAULT 0 AFTER freight');
+    add_column('amazon_orders', 'gstin', 'VARCHAR(20) NULL AFTER invoice_no');
+    // New orders feed the GST sales register by themselves. Orders already here
+    // don't, so registers typed in by hand before this upgrade aren't doubled.
+    if (add_column('amazon_orders', 'gst_sync', 'TINYINT(1) NOT NULL DEFAULT 1')) {
+        db()->exec('UPDATE amazon_orders SET gst_sync = 0');
+    }
+    add_column('gst_purchases', 'paid', "ENUM('Pending','Paid') NOT NULL DEFAULT 'Pending' AFTER total");
+    add_column('gst_purchases', 'remarks', 'TEXT NULL');
+    add_column('gst_sales', 'remarks', 'TEXT NULL');
+    add_column('gst_sales', 'amazon_order_id', 'INT NULL AFTER sale_id');
+    add_column('gst_sales', 'auto', 'TINYINT(1) NOT NULL DEFAULT 0');
+    // Records brought over from the old dashboard can lack a design or location.
+    db()->exec('ALTER TABLE samples MODIFY design_id INT NULL, MODIFY location_id INT NULL');
+    db()->exec("CREATE TABLE IF NOT EXISTS todos (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        assignee VARCHAR(120) NULL,
+        priority ENUM('High','Medium','Low') NOT NULL DEFAULT 'Medium',
+        due DATE NULL,
+        notes TEXT NULL,
+        done TINYINT(1) NOT NULL DEFAULT 0,
+        done_on DATE NULL,
+        created_at DATETIME NOT NULL, created_by INT NULL,
+        updated_at DATETIME NOT NULL, updated_by INT NULL,
+        INDEX (done, due)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 }

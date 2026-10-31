@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { get } from '@/lib/api'
 import { todayISO } from '@/lib/format'
 import { useNavigate } from 'react-router'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, ArrowRightLeft } from 'lucide-react'
 import { Page } from '@/components/Layout'
 import { DateRangePicker, useDateRange } from '@/components/common'
 import { TrendChart } from '@/components/TrendChart'
@@ -34,6 +34,10 @@ export default function Overview() {
   }, [d, names])
   const lowStock = stock.filter((s) => s.low)
   const firstName = boot?.user.name.split(' ')[0]
+  // Until the old dashboard's data is brought over, owners get a way in from here.
+  const isOwner = boot?.user.role === 'owner'
+  const { data: legacy } = useQuery({ queryKey: ['legacy-status'], queryFn: () => get<{ last: unknown }>('legacy/status'), enabled: isOwner })
+  const offerImport = isOwner && legacy && !legacy.last && d && d.sales_total === 0 && d.expenses === 0
 
   return (
     <Page title="Overview" subtitle={`${greeting()}${firstName ? `, ${firstName}` : ''}.`} toolbar={<DateRangePicker state={range} />}>
@@ -41,6 +45,16 @@ export default function Overview() {
         <Loading />
       ) : (
         <>
+          {offerImport && (
+            <button type="button" onClick={() => navigate('/settings', { state: { legacyImport: true } })} className="pressable mb-3 flex w-full items-center gap-3 rounded-[1.25rem] bg-surface p-4 text-left shadow-card md:p-5">
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent"><ArrowRightLeft className="size-5" /></span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold">Bring your data over from the old dashboard</span>
+                <span className="block text-[0.875rem] text-label-2">Sales, expenses, Amazon, GST, stock, balances and to-dos, in one go. You’ll see a preview first.</span>
+              </span>
+            </button>
+          )}
+
           {/* Hero: the single number partners check most. */}
           <button type="button" onClick={() => navigate('/money')} className="pressable mb-3 block w-full rounded-[1.25rem] bg-accent p-5 text-left text-on-accent md:p-6">
             <div className="text-[0.875rem] font-medium opacity-80">Money on hand, all accounts</div>
@@ -50,11 +64,11 @@ export default function Overview() {
 
           <StatGrid className="mt-3">
             <Stat label="Profit" value={moneyShort(d.profit)} tone={d.profit >= 0 ? 'green' : 'red'} sub="After fees and expenses" />
-            <Stat label="Sales" value={moneyShort(d.sales_total)} sub="Direct sales" onClick={() => navigate('/sales')} />
+            <Stat label="Sales" value={moneyShort(d.sales_total)} sub="Direct sales, before GST" onClick={() => navigate('/sales')} />
             <Stat label="Money received" value={moneyShort(d.received)} sub="From direct sales" />
             <Stat label="Expenses" value={moneyShort(d.expenses)} onClick={() => navigate('/expenses')} />
             <Stat label="Owed to us" value={moneyShort(d.outstanding)} tone={d.outstanding > 0 ? 'red' : undefined} onClick={() => navigate('/receivables')} />
-            <Stat label="Amazon revenue" value={moneyShort(d.amazon_revenue)} sub={`${qty(d.amazon_orders)} shipped orders`} onClick={() => navigate('/amazon')} />
+            <Stat label="Amazon revenue" value={moneyShort(d.amazon_revenue)} sub={`${qty(d.amazon_orders)} shipped orders, after refunds`} onClick={() => navigate('/amazon')} />
             <Stat label="Samples given" value={`${qty(d.samples)} pcs`} onClick={() => navigate('/samples')} />
             <Stat label="Stock on hand" value={`${qty(d.stock_total)} pcs`} sub="As of now" onClick={() => navigate('/stock')} />
           </StatGrid>

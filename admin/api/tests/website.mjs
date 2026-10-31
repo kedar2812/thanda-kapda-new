@@ -197,7 +197,7 @@ delete old.tables.cms_draft
 delete old.tables.cms_media
 await ok('POST', 'restore', old)
 check('An older backup (no website tables) restores and keeps the website', (await ok('GET', 'cms')).published?.id, pub.revision)
-check('Schema version survives a restore', (await ok('GET', 'public/health')).schema, 2)
+check('Schema version survives a restore', (await ok('GET', 'public/health')).schema, 3)
 await ok('POST', 'restore', backup)
 const afterSave = await ok('GET', 'cms')
 await ok('PUT', 'cms/draft', { data: draft1, updated_at: afterSave.draft_updated_at })

@@ -2,7 +2,7 @@ import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { AnimatePresence, motion } from 'motion/react'
 import {
-  Activity, BarChart3, Boxes, ChevronRight, Clock, Gift, House, LayoutGrid, Package, PenLine, Receipt, ReceiptIndianRupee, Settings, ShoppingBag, Wallet, type LucideIcon,
+  Activity, BarChart3, Boxes, ChevronRight, Clock, Gift, House, LayoutGrid, ListTodo, Package, PenLine, Receipt, ReceiptIndianRupee, Settings, ShoppingBag, Wallet, type LucideIcon,
 } from 'lucide-react'
 import { useBoot, useSyncState } from '@/lib/data'
 import { cx, Group } from './ui'
@@ -21,7 +21,8 @@ export const NAV: NavItem[] = [
   { to: '/gst', label: 'GST', icon: ReceiptIndianRupee, hint: 'Purchase and sales registers' },
   { to: '/website', label: 'Website', icon: PenLine, hint: 'Edit words and photos on thandakapda.co', group: 'Website' },
   { to: '/analytics', label: 'Visitors', icon: BarChart3, hint: 'Who visits the website and what they do' },
-  { to: '/activity', label: 'Activity', icon: Activity, hint: 'Who changed what, and when', group: 'Team' },
+  { to: '/todos', label: 'To-do', icon: ListTodo, hint: 'Shared tasks and reminders', group: 'Team' },
+  { to: '/activity', label: 'Activity', icon: Activity, hint: 'Who changed what, and when' },
   { to: '/settings', label: 'Settings', icon: Settings, hint: 'Lists, team, theme, backup' },
 ]
 

@@ -1,35 +1,29 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router'
+import { useMemo, useState } from 'react'
 import { ReceiptIndianRupee } from 'lucide-react'
 import { Page } from '@/components/Layout'
 import { Sheet } from '@/components/Sheet'
 import { AddButton, DeleteButton, Editor, ExportButton, FormError, Toolbar, downloadCsv, matches } from '@/components/common'
-import { Button, DateInput, Empty, Field, FormGrid, Group, Loading, NumberInput, Row, SearchField, Segmented, Stat, StatGrid, TextInput } from '@/components/ui'
+import { Badge, Button, DateInput, Empty, Field, FormGrid, Group, Loading, Notice, NumberInput, Row, SearchField, Segmented, Stat, StatGrid, TextArea, TextInput } from '@/components/ui'
 import { useList, useReport } from '@/lib/data'
 import { date, money, month, todayISO } from '@/lib/format'
 import { num, toValues, useRecordForm } from '@/lib/form'
-import type { GstEntry, GstMonth, Sale } from '@/lib/types'
+import type { GstEntry, GstMonth } from '@/lib/types'
 
 type Tab = 'summary' | 'purchases' | 'sales'
 type Kind = 'purchases' | 'sales'
+type PaidFilter = 'all' | 'paid' | 'unpaid'
 
 const table = (k: Kind) => (k === 'purchases' ? 'gst_purchases' : 'gst_sales')
 const who = (e: GstEntry) => e.supplier ?? e.party ?? ''
 
-interface Editing { id: number; kind: Kind; entry: GstEntry | 'new'; fromSale?: Sale }
+const isPaid = (e: GstEntry) => e.paid === 'Paid'
+
+interface Editing { id: number; kind: Kind; entry: GstEntry | 'new' }
 
 export default function Gst() {
-  const location = useLocation()
-  const navigate = useNavigate()
-  const fromSale = (location.state as { fromSale?: Sale } | null)?.fromSale
-  const [tab, setTab] = useState<Tab>(fromSale ? 'sales' : 'summary')
-  const [editing, setEditing] = useState<Editing | null>(fromSale ? { id: -1, kind: 'sales', entry: 'new', fromSale } : null)
+  const [tab, setTab] = useState<Tab>('summary')
+  const [editing, setEditing] = useState<Editing | null>(null)
   const open = (kind: Kind, entry: GstEntry | 'new') => setEditing({ id: entry === 'new' ? -1 : entry.id, kind, entry })
-
-  // Clear the router state so a refresh doesn't reopen the form.
-  useEffect(() => {
-    if (fromSale) navigate('.', { replace: true, state: null })
-  }, [fromSale, navigate])
 
   return (
     <Page
@@ -53,7 +47,7 @@ export default function Gst() {
       {tab !== 'summary' && <Register kind={tab} onOpen={(entry) => open(tab, entry)} />}
       <Editor
         item={editing}
-        render={(e, open) => e && <GstForm kind={e.kind} entry={e.entry === 'new' ? null : e.entry} fromSale={e.fromSale} open={open} onDone={() => setEditing(null)} />}
+        render={(e, open) => e && <GstForm kind={e.kind} entry={e.entry === 'new' ? null : e.entry} open={open} onDone={() => setEditing(null)} />}
       />
     </Page>
   )
@@ -90,27 +84,34 @@ function Register({ kind, onOpen }: { kind: Kind; onOpen: (e: GstEntry) => void 
   const { data, isLoading } = useList<GstEntry>(table(kind))
   const [q, setQ] = useState('')
   const [m, setM] = useState('')
+  const [paid, setPaid] = useState<PaidFilter>('all')
   const months = useMemo(() => [...new Set((data ?? []).map((e) => e.date.slice(0, 7)))], [data])
-  const shown = useMemo(() => (data ?? []).filter((e) => (!m || e.date.startsWith(m)) && matches(q, who(e), e.gstin, e.invoice_no)), [data, q, m])
+  const shown = useMemo(
+    () => (data ?? []).filter((e) => (!m || e.date.startsWith(m)) && (paid === 'all' || (paid === 'paid') === isPaid(e)) && matches(q, who(e), e.gstin, e.invoice_no, e.remarks)),
+    [data, q, m, paid],
+  )
   const label = kind === 'purchases' ? 'Supplier' : 'Party'
+  const pending = shown.filter((e) => !isPaid(e)).reduce((a, e) => a + e.total, 0)
 
   const exportCsv = () =>
-    downloadCsv(`gst-${kind}.csv`, ['Date', label, 'GSTIN', 'Invoice no.', 'Taxable value', 'GST', 'Total'], shown.map((e) => [e.date, who(e), e.gstin, e.invoice_no, e.taxable, e.gst, e.total]))
+    downloadCsv(`gst-${kind}.csv`, ['Date', label, 'GSTIN', 'Invoice no.', 'Taxable value', 'GST', 'Total', kind === 'purchases' ? 'Bill status' : 'Status', 'Remarks'], shown.map((e) => [e.date, who(e), e.gstin, e.invoice_no, e.taxable, e.gst, e.total, e.paid, e.remarks]))
 
   return (
     <>
       <Toolbar className="mb-5">
-        <div className="md:w-72"><SearchField value={q} onChange={setQ} placeholder={`${label}, GSTIN or invoice`} /></div>
+        <div className="md:w-72"><SearchField value={q} onChange={setQ} placeholder={`${label}, GSTIN, invoice, remarks`} /></div>
+        <Segmented<PaidFilter> value={paid} onChange={setPaid} options={[{ value: 'all', label: 'All' }, { value: 'paid', label: 'Paid' }, { value: 'unpaid', label: kind === 'purchases' ? 'Pending' : 'Unpaid' }]} className="md:w-64" />
         <select aria-label="Month" value={m} onChange={(e) => setM(e.target.value)} className="h-9 appearance-none rounded-[0.625rem] bg-fill px-3 text-[0.875rem] font-medium outline-none">
           <option value="">All months</option>
           {months.map((x) => <option key={x} value={x}>{month(x)}</option>)}
         </select>
         <div className="md:ml-auto"><ExportButton onClick={exportCsv} /></div>
       </Toolbar>
-      <StatGrid className="lg:grid-cols-3">
+      <StatGrid>
         <Stat label="Entries" value={shown.length} />
         <Stat label="Taxable value" value={money(shown.reduce((a, e) => a + e.taxable, 0))} />
-        <Stat label={kind === 'purchases' ? 'GST paid (input)' : 'GST collected (output)'} value={money(shown.reduce((a, e) => a + e.gst, 0))} className="col-span-2 lg:col-span-1" />
+        <Stat label={kind === 'purchases' ? 'GST paid (input)' : 'GST collected (output)'} value={money(shown.reduce((a, e) => a + e.gst, 0))} />
+        <Stat label={kind === 'purchases' ? 'Pending to suppliers' : 'Not yet received'} value={money(pending)} tone={pending > 0.004 ? 'red' : 'green'} />
       </StatGrid>
       {isLoading ? (
         <Loading />
@@ -119,7 +120,14 @@ function Register({ kind, onOpen }: { kind: Kind; onOpen: (e: GstEntry) => void 
       ) : (
         <Group>
           {shown.map((e) => (
-            <Row key={e.id} onClick={() => onOpen(e)} title={who(e)} subtitle={`${date(e.date)}${e.invoice_no ? ` · Inv ${e.invoice_no}` : ''}${e.gstin ? ` · ${e.gstin}` : ''}`} trailing={money(e.total)} trailingSub={`GST ${money(e.gst)}`} />
+            <Row
+              key={e.id}
+              onClick={() => onOpen(e)}
+              title={<>{who(e)} {e.auto && <Badge tone="accent">Auto</Badge>}</>}
+              subtitle={`${date(e.date)}${e.invoice_no ? ` · Inv ${e.invoice_no}` : ''}${e.gstin ? ` · ${e.gstin}` : ''}${e.remarks ? ` · ${e.remarks}` : ''}`}
+              trailing={money(e.total)}
+              trailingSub={isPaid(e) ? `GST ${money(e.gst)}` : <span className="font-medium text-orange">{kind === 'purchases' ? 'Bill pending' : 'Unpaid'}</span>}
+            />
           ))}
         </Group>
       )}
@@ -127,22 +135,25 @@ function Register({ kind, onOpen }: { kind: Kind; onOpen: (e: GstEntry) => void 
   )
 }
 
-function GstForm({ kind, entry, fromSale, open, onDone }: { kind: Kind; entry: GstEntry | null; fromSale?: Sale; open: boolean; onDone: () => void }) {
+function GstForm({ kind, entry, open, onDone }: { kind: Kind; entry: GstEntry | null; open: boolean; onDone: () => void }) {
   const nameKey = kind === 'purchases' ? 'supplier' : 'party'
   const f = useRecordForm(
     toValues(entry, {
-      date: fromSale?.date ?? todayISO(),
-      [nameKey]: fromSale?.party ?? '',
+      date: todayISO(),
+      [nameKey]: '',
       gstin: '',
       invoice_no: '',
       taxable: '',
       gst: '',
-      total: fromSale ? String(fromSale.total) : '',
-      ...(kind === 'sales' ? { sale_id: fromSale ? String(fromSale.id) : '' } : {}),
+      total: '',
+      remarks: '',
+      ...(kind === 'purchases' ? { paid: 'Pending' } : { sale_id: '' }),
     }),
     { table: table(kind), saved: entry ? 'Entry updated' : 'Entry saved', onDone },
   )
   const v = f.values
+  const locked = Boolean(entry?.auto)
+  const source = entry?.amazon_order_id ? 'Amazon order' : 'sale'
 
   const setPart = (k: 'taxable' | 'gst', x: string) => {
     const autoTotal = num(v.taxable) + num(v.gst)
@@ -163,9 +174,14 @@ function GstForm({ kind, entry, fromSale, open, onDone }: { kind: Kind; entry: G
   }
 
   return (
-    <Sheet open={open} onClose={onDone} title={`${entry ? 'Edit' : 'New'} GST ${kind === 'purchases' ? 'purchase' : 'sale'}`} onSubmit={() => f.save()} busy={f.busy}>
+    <Sheet open={open} onClose={onDone} title={`${locked ? '' : entry ? 'Edit ' : 'New '}GST ${kind === 'purchases' ? 'purchase' : 'sale'}`} onSubmit={locked ? undefined : () => f.save()} busy={f.busy}>
       <div className="space-y-5 pt-1">
         <FormError error={f.error} />
+        {locked && <Notice tone="accent">This line comes from a {source} and follows it. To change it, edit the {source}.</Notice>}
+        <fieldset disabled={locked} className="space-y-5">
+        {kind === 'purchases' && (
+          <Segmented value={v.paid} onChange={(x) => f.set('paid', x)} options={[{ value: 'Pending', label: 'Bill pending' }, { value: 'Paid', label: 'Bill paid' }]} />
+        )}
         <FormGrid>
           <Field label={kind === 'purchases' ? 'Supplier' : 'Party'} required><TextInput value={v[nameKey]} onChange={(e) => f.set(nameKey, e.target.value)} /></Field>
           <Field label="Date" required><DateInput value={v.date} onChange={(e) => f.set('date', e.target.value)} /></Field>
@@ -175,14 +191,19 @@ function GstForm({ kind, entry, fromSale, open, onDone }: { kind: Kind; entry: G
           <Field label="GST amount"><NumberInput prefix="₹" value={v.gst} onChange={(x) => setPart('gst', x)} placeholder="0.00" /></Field>
           <Field label="Total" hint="Taxable + GST, filled in for you. You can change it."><NumberInput prefix="₹" value={v.total} onChange={(x) => f.set('total', x)} placeholder="0.00" /></Field>
         </FormGrid>
-        <div>
-          <p className="mb-2 px-1 text-[0.8125rem] text-label-2">Only know the total? Split it at a GST rate:</p>
-          <div className="flex gap-2">
-            {[5, 12, 18, 28].map((r) => <Button key={r} size="sm" variant="gray" onClick={() => split(r)}>{r}%</Button>)}
+        {!locked && (
+          <div>
+            <p className="mb-2 px-1 text-[0.8125rem] text-label-2">Only know the total? Split it at a GST rate:</p>
+            <div className="flex gap-2">
+              {[5, 12, 18, 28].map((r) => <Button key={r} size="sm" variant="gray" onClick={() => split(r)}>{r}%</Button>)}
+            </div>
           </div>
-        </div>
-        {fromSale && <p className="px-1 text-[0.8125rem] text-label-2">Linked to the sale to {fromSale.party} on {date(fromSale.date)}.</p>}
-        {f.isEdit && <DeleteButton label="Delete entry" onClick={() => f.remove('entry', 'This only removes it from the GST register.')} disabled={f.busy} />}
+        )}
+        <Field label="Remarks">
+          <TextArea value={v.remarks} onChange={(e) => f.set('remarks', e.target.value)} placeholder="Optional" />
+        </Field>
+        </fieldset>
+        {f.isEdit && !locked && <DeleteButton label="Delete entry" onClick={() => f.remove('entry', 'This only removes it from the GST register.')} disabled={f.busy} />}
       </div>
     </Sheet>
   )
