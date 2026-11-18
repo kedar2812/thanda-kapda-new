@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Uploads the website and/or the dashboard to the Cloud4Host server over FTPS.
 #
-#   ./deploy.sh site     # thandakapda.co        (FTP login locked to /www/thandakapda.co)
-#   ./deploy.sh admin    # admin.thandakapda.co  (FTP login locked to /www/admin.thandakapda.co)
+#   ./deploy.sh site     # site/  → thandakapda.co        (FTP login locked to /www/thandakapda.co)
+#   ./deploy.sh admin    # admin/ → admin.thandakapda.co  (FTP login locked to /www/admin.thandakapda.co)
 #   ./deploy.sh all      # dashboard first, then the website
 #
 # Only files that changed since the last deploy are sent (hashes are kept in
@@ -47,22 +47,23 @@ upload_dir() { # <local dir> <netrc> <manifest name>
 }
 
 deploy_site() {
+  local published=site/src/content/published.json
   echo "Fetching the latest published website content…"
   # Bake it into the HTML so search engines and link previews see current words.
-  if curl -fsS --max-time 20 "$ADMIN_URL/live/content.json" -o src/content/published.json.tmp \
-    && node -e "const j=JSON.parse(require('fs').readFileSync('src/content/published.json.tmp','utf8')); if(typeof j.version!=='number') process.exit(1)"; then
-    mv src/content/published.json.tmp src/content/published.json
-    echo "  content version $(node -p "require('./src/content/published.json').version")"
+  if curl -fsS --max-time 20 "$ADMIN_URL/live/content.json" -o "$published.tmp" \
+    && node -e "const j=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')); if(typeof j.version!=='number') process.exit(1)" "$published.tmp"; then
+    mv "$published.tmp" "$published"
+    echo "  content version $(node -p "require('./$published').version")"
   else
-    rm -f src/content/published.json.tmp
-    echo "  could not fetch it; building with the content already in src/content/published.json"
+    rm -f "$published.tmp"
+    echo "  could not fetch it; building with the content already in $published"
   fi
   echo "Checking the editor covers all content…"
-  npx --yes jiti scripts/check-content-schema.ts
+  (cd site && npx --yes jiti scripts/check-content-schema.ts)
   echo "Building website…"
-  npm run build >/dev/null
+  (cd site && npm run build >/dev/null)
   echo "Uploading website…"
-  upload_dir out .deploy/site.netrc site
+  upload_dir site/out .deploy/site.netrc site
 }
 
 deploy_admin() {

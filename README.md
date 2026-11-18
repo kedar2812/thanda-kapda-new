@@ -4,6 +4,27 @@ Marketing and catalogue site for Thanda Kapda Co., an Indian wet-wipe brand
 (Morning Spring, Namasté, and custom bulk orders), plus the business
 dashboard at admin.thandakapda.co that runs the business **and the website**.
 
+## Layout
+
+```
+site/            the public website, thandakapda.co        → ./deploy.sh site
+  src/             pages, components, website content model (src/content)
+  public/          product photos and static files
+  scripts/         content-schema check, photo resizing
+  tests/e2e/       browser test of site + dashboard together
+admin/           the business dashboard, admin.thandakapda.co → ./deploy.sh admin
+  web/             React front end (Vite)
+  api/             PHP API: index.php, src/*.php, schema.sql
+  api/tests/       API tests (acceptance, website, backup)
+  build.sh         builds web + api into admin/dist
+deploy.sh        uploads either or both over FTPS
+.deploy/         (git-ignored) FTP logins, deploy manifests, local secrets
+```
+
+The dashboard's website editor reuses the site's content model and icons
+(`site/src/content`, `site/src/components/ui/Icons.tsx`), so the editor
+always matches the site.
+
 ## Stack
 
 - **Website:** Next.js 16 (App Router, static export) with React 19, Tailwind
@@ -11,7 +32,46 @@ dashboard at admin.thandakapda.co that runs the business **and the website**.
   Fraunces and Hanken Grotesk. Hosted as plain files on Apache shared hosting.
 - **Dashboard:** React 19 + Vite front end (`admin/web`), PHP 8.1+ API
   (`admin/api`) and MySQL/MariaDB. Sales (with GST), stock, money, Amazon,
-  GST registers, to-do list, the website editor and visitor analytics.
+  GST registers, to-do list, the website editor, visitor analytics and full
+  backups.
+
+## Backups (Settings → Backup)
+
+**Download full backup** saves one `.zip` with everything the dashboard and
+the website hold: every record, every login, the activity history, visitor
+statistics, every published version of the website (and the unpublished
+draft), and every photo file. Keep a copy somewhere safe every month.
+
+**Restore from a backup** puts all of it back exactly as it was. If the server
+is ever lost: deploy the dashboard to the new server (`./deploy.sh all`),
+create the first login when it asks, and restore the `.zip` (an empty
+Overview offers it straight away). Owners only, because a backup holds every
+login.
+
+- **Nothing changes until everything has arrived.** The file is checked in the
+  browser first (every table's record count and every photo's SHA-256 are in
+  `manifest.json`), sent to the server in 1 MB pieces (fine on hosts with small
+  upload limits; a dropped connection is retried), checked again on the
+  server, then swapped in with one database transaction and one folder rename.
+  If anything fails, the database rolls back and the photos stay as they were.
+- **You stay signed in.** The person restoring keeps their current password
+  and owner access, even if their login isn't in the backup. Everyone else is
+  signed out and signs in with the password they had when the backup was made.
+- **Moving to a new address works.** Photo links in the website content are
+  rewritten to the server the backup is restored on.
+- **Refused, with a reason, before anything changes:** a damaged or edited
+  zip, a missing table or photo, a backup from a newer dashboard version,
+  records with fields this dashboard doesn't store.
+- Old single-file `.json` backups (from before the zip) still restore; they
+  only replace the business records they contain.
+- A zip that was unzipped and zipped again on a computer (one folder around
+  everything) still opens.
+
+How it works: `admin/web/src/lib/backup.ts` builds and reads the zip in the
+browser (shared hosting often lacks PHP's zip extension) and
+`admin/api/src/backup.php` serves the data page by page and stages, checks and
+applies a restore. A new database table must be added to `BACKUP_TABLES` (or
+`BACKUP_SKIPPED_TABLES`) in `backup.php`; the backup test fails until it is.
 
 ## Editing the website (the dashboard's Website screen)
 
@@ -38,9 +98,10 @@ section in the preview and press **Edit** to jump to it.
    scripts. If it is newer than what the page was built with, the page
    re-renders with it straight after loading (or on the next page change if
    the visitor has already started tapping). No rebuild is needed.
-3. `./deploy.sh site` downloads the same file into `src/content/published.json`
-   before building, so the HTML that search engines and link previews read
-   also carries the latest words. Run it now and then after big edits.
+3. `./deploy.sh site` downloads the same file into
+   `site/src/content/published.json` before building, so the HTML that search
+   engines and link previews read also carries the latest words. Run it now
+   and then after big edits.
 
 Product **pages** are generated per product at build time, so adding a third
 product needs a code change and a deploy; everything about the existing two is
@@ -50,20 +111,20 @@ editable.
 
 | What | File |
 | --- | --- |
-| All website words and photos, as shipped (defaults) | `src/content/defaults.ts` |
-| Editor layout: sections, labels, hints | `src/content/schema.ts` |
-| Coerces any stored content to the right shape | `src/content/normalize.ts` |
-| Baked + live content on the site, preview mode | `src/content/ContentProvider.tsx`, `src/content/index.ts` |
-| Responsive image loader | `src/lib/image-loader.ts`, `scripts/photo-variants.sh` |
-| Visitor counting (site side) | `src/lib/analytics.ts`, `src/components/Analytics.tsx` |
-| Colours, type scale, paper textures | `src/app/globals.css` |
-| Dashboard API: content, photos, analytics, upgrades | `admin/api/src/cms.php`, `analytics.php`, `migrate.php` |
-| Dashboard screens | `admin/web/src/pages/Website.tsx`, `Photos.tsx`, `Analytics.tsx` |
+| All website words and photos, as shipped (defaults) | `site/src/content/defaults.ts` |
+| Editor layout: sections, labels, hints | `site/src/content/schema.ts` |
+| Coerces any stored content to the right shape | `site/src/content/normalize.ts` |
+| Baked + live content on the site, preview mode | `site/src/content/ContentProvider.tsx`, `site/src/content/index.ts` |
+| Responsive image loader | `site/src/lib/image-loader.ts`, `site/scripts/photo-variants.sh` |
+| Visitor counting (site side) | `site/src/lib/analytics.ts`, `site/src/components/Analytics.tsx` |
+| Colours, type scale, paper textures | `site/src/app/globals.css` |
+| Dashboard API: content, photos, analytics, backups, upgrades | `admin/api/src/cms.php`, `analytics.php`, `backup.php`, `migrate.php` |
+| Dashboard screens | `admin/web/src/pages/Website.tsx`, `Photos.tsx`, `Analytics.tsx`, `Settings.tsx` |
 
 To add a field: add it to `defaults.ts`, use it in the component through
 `useContent()`, and give it a label in `schema.ts`. `npx jiti
-scripts/check-content-schema.ts` fails if any content value has no editor
-field (deploy runs it too).
+scripts/check-content-schema.ts` (in `site/`) fails if any content value has
+no editor field (deploy runs it too).
 
 ## Visitor analytics (the dashboard's Visitors screen)
 
@@ -77,41 +138,10 @@ Instagram and Google reviews. Bots and headless browsers are ignored. Open
 `https://thandakapda.co/?tk-ignore=1` once on your own devices to leave your
 visits out (`?tk-ignore=0` undoes it).
 
-## Moving from the old dashboard (thanda-kapda.netlify.app)
-
-The business used to run on a single-page app on Netlify that kept everything
-as one JSON object in Supabase. **Settings → Move from the old dashboard**
-(owners only, also offered on an empty Overview) brings it all over:
-
-1. In the old dashboard, **⬇ Backup** (top right) downloads a `.json` file.
-2. Choose it here. The server runs the whole import inside a transaction,
-   works out the figures the old app showed **with its own formulas**, sets
-   them beside ours, and rolls back: a preview with nothing changed.
-3. **Bring it all over** downloads a backup of what's here, then replaces the
-   business data (logins, website content and visitor stats stay).
-
-How it maps (`admin/api/src/legacy.php`):
-
-- Stock in the old app was numbers edited by hand. An "Opening stock" entry
-  per design and place, dated the day before the first record, makes every
-  count land exactly on the old number.
-- Money recorded without an account (most of the old Excel rows) sits in an
-  archived "Not specified (old dashboard)" account, zeroed by one correction,
-  so balances match the old app, which left it out. Choosing the real account
-  on a sale or expense moves the money there.
-- Free-text people become People when they look like names; anything else is
-  kept in the record's notes. Rows with no date take the date of the same
-  Amazon order, or of the row next to them.
-- GST sales lines the old app generated are rebuilt from their sale or order
-  and keep following it. The old audit trail joins Activity with its users.
-- Anything adjusted to fit (e.g. a price typed in the freight column) is
-  listed under "Good to know"; nothing is dropped silently.
-
 ## Run it locally
 
 ```bash
-npm install
-npm run dev                       # website on http://localhost:3000
+(cd site && npm install && npm run dev)          # website on http://localhost:3000
 
 # Dashboard: needs PHP 8.1+ and MySQL/MariaDB
 cp admin/api/config.sample.php admin/api/config.php   # fill in the database
@@ -124,14 +154,22 @@ API, start it with `NEXT_PUBLIC_ADMIN_URL=http://127.0.0.1:8081`.
 
 ## Testing
 
-```bash
-# API, on an EMPTY scratch database (they create a test owner):
-node admin/api/tests/acceptance.mjs http://127.0.0.1:8081
-node admin/api/tests/website.mjs   http://127.0.0.1:8081   # content, photos, analytics, backups
-node admin/api/tests/legacy.mjs    http://127.0.0.1:8081 old-backup.json   # import from the old dashboard (replaces data)
+The API tests need scratch databases, never real data. `config.php` may name
+another one through `TK_CONFIG`, e.g. a second server for the backup test:
+`TK_CONFIG=/path/to/scratch-config.php php -S 127.0.0.1:8083 dev-router.php`.
 
-npx jiti scripts/check-content-schema.ts                  # every content value is editable
-node tests/e2e/run.mjs <screenshot folder>                # real browser; see the header of the file
+```bash
+cd admin/api
+# Server A on an EMPTY scratch database (they create a test owner):
+node tests/acceptance.mjs http://127.0.0.1:8082
+node tests/website.mjs    http://127.0.0.1:8082   # content, photos, analytics
+# Backup and restore, A → a second, EMPTY server B (a "new server"), plus every
+# way a backup can be damaged. TK_CONFIG is A's config (the test seeds extra data):
+TK_CONFIG=... npx jiti tests/backup.test.ts http://127.0.0.1:8082 http://127.0.0.1:8083
+
+cd site
+npx jiti scripts/check-content-schema.ts      # every content value is editable
+node tests/e2e/run.mjs <screenshot folder>    # real browser; see the header of the file
 ```
 
 ## Deploy
@@ -152,3 +190,4 @@ and whether the `live/` folder is writable.
 - Amazon ratings and prices (Products)
 - Google review rating and count (Brand & contact → Google reviews)
 - Pack sizes (Products)
+- A fresh backup, downloaded and kept safe, each month (Settings → Backup)

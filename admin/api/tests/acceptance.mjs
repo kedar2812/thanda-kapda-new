@@ -127,14 +127,7 @@ check('9. Still in history', (await ok('GET', 'designs')).find((d) => d.id === m
 const over = await api('POST', 'sales', { date: today, party: 'Over', quantity: 1, price: 10, payments: [{ amount: 20, account_id: cash }] });
 check('Overpay asks for confirmation', over.json.code, 'overpay');
 
-// 11
-const snapshot = async () => JSON.stringify([await ok('GET', 'reports/stock'), await ok('GET', 'reports/balances'), (await ok('GET', 'reports/dashboard'))]);
-const before = await snapshot();
-const backup = await ok('GET', 'backup');
-await ok('POST', 'restore', { app: 'thanda-kapda-dashboard', version: 1, tables: Object.fromEntries(Object.keys(backup.tables).map((t) => [t, t === 'settings' ? backup.tables[t] : []])) });
-check('11. Wipe empties stock', (await ok('GET', 'reports/stock')).cells.length, 0);
-await ok('POST', 'restore', backup);
-check('11. Restore gives identical numbers', await snapshot(), before);
+// 11. Backup and restore: see backup.test.ts (it also checks the numbers come back identical).
 
 console.log(failures ? `\n${failures} FAILED` : '\nAll acceptance tests passed.');
 process.exit(failures ? 1 : 0);

@@ -13,7 +13,6 @@ require __DIR__ . '/src/backup.php';
 require __DIR__ . '/src/migrate.php';
 require __DIR__ . '/src/cms.php';
 require __DIR__ . '/src/analytics.php';
-require __DIR__ . '/src/legacy.php';
 
 error_reporting(E_ALL);
 ini_set('display_errors', '0');
@@ -105,12 +104,12 @@ function route(string $method, array $p): mixed
                              CASE WHEN a.entity = 'legacy' THEN JSON_UNQUOTE(JSON_EXTRACT(a.data, '$.user')) END AS legacy_user
                       FROM activity_log a LEFT JOIN users u ON u.id = a.user_id ORDER BY a.at DESC, a.id DESC LIMIT $limit"));
 
-        case $a === 'backup' && $method === 'GET':
-            return make_backup();
+        // ---------- full backup (.zip, built by the browser) and restore
+        case $a === 'backup':
+            return route_backup($method, $p);
 
-        case $a === 'restore' && $method === 'POST':
-            require_owner();
-            return restore_backup(input());
+        case $a === 'restore':
+            return route_restore($method, $p);
 
         case $a === 'users':
             return route_users($method, $id);
@@ -150,14 +149,6 @@ function route(string $method, array $p): mixed
 
         case $a === 'storage' && $method === 'GET':
             return storage_status();
-
-        // ---------- moving over from the old Netlify dashboard
-        case $a === 'legacy' && ($p[1] ?? '') === 'import' && $method === 'POST':
-            require_owner();
-            return import_legacy(input());
-
-        case $a === 'legacy' && ($p[1] ?? '') === 'status' && $method === 'GET':
-            return ['last' => json_decode((string) scalar("SELECT v FROM settings WHERE k = 'legacy_import'"), true)];
 
         case $a === 'gst_sales' && $method === 'GET' && !$id:
             return list_gst_sales();

@@ -139,25 +139,6 @@ export interface Todo extends Meta {
   done_on: string | null
 }
 
-export interface LegacyFigure {
-  key: string
-  label: string
-  kind: 'money' | 'qty'
-  old: number
-  new: number
-  match: boolean
-  explain: string | null
-}
-
-export interface LegacyResult {
-  dry_run: boolean
-  counts: Record<string, number>
-  source: Record<string, number>
-  figures: LegacyFigure[]
-  notes: { area: string; text: string }[]
-  skipped: string[]
-}
-
 export interface AccountEntry extends Meta {
   date: string
   account_id: number

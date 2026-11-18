@@ -36,25 +36,38 @@ export function setAuthLostHandler(fn: () => void) {
   onAuthLost = fn
 }
 
-export async function api<T = unknown>(method: string, path: string, body?: unknown): Promise<T> {
+interface Options {
+  /** Milliseconds before giving up (default 20 s). */
+  timeout?: number
+  /** Send these bytes as the body instead of JSON. */
+  bytes?: Uint8Array
+}
+
+async function request(method: string, path: string, body: unknown, { timeout = 20000, bytes }: Options): Promise<Response> {
   let res: Response
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), timeout)
   try {
-    const ctrl = new AbortController()
-    const timer = setTimeout(() => ctrl.abort(), 20000)
     res = await fetch('/api/' + path, {
       method,
       credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json', 'X-TK-Client': '1' },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      headers: { 'Content-Type': bytes ? 'application/octet-stream' : 'application/json', 'X-TK-Client': '1' },
+      body: bytes ? (bytes as BodyInit) : body === undefined ? undefined : JSON.stringify(body),
       signal: ctrl.signal,
+      cache: 'no-store',
     })
-    clearTimeout(timer)
   } catch {
     setOnline(false)
     throw new OfflineError()
+  } finally {
+    clearTimeout(timer)
   }
   setOnline(true)
+  if (!res.ok) await readJson(res)
+  return res
+}
 
+async function readJson<T>(res: Response): Promise<T> {
   let json: { error?: string; code?: string } & Record<string, unknown>
   try {
     json = await res.json()
@@ -68,7 +81,22 @@ export async function api<T = unknown>(method: string, path: string, body?: unkn
   return json as T
 }
 
+export async function api<T = unknown>(method: string, path: string, body?: unknown, opts: Options = {}): Promise<T> {
+  return readJson<T>(await request(method, path, body, opts))
+}
+
+/** Downloads a file from the API as bytes. */
+export async function getBytes(path: string, timeout = 120000): Promise<Uint8Array> {
+  const res = await request('GET', path, undefined, { timeout })
+  try {
+    return new Uint8Array(await res.arrayBuffer())
+  } catch {
+    setOnline(false)
+    throw new OfflineError()
+  }
+}
+
 export const get = <T,>(path: string) => api<T>('GET', path)
-export const post = <T,>(path: string, body?: unknown) => api<T>('POST', path, body ?? {})
+export const post = <T,>(path: string, body?: unknown, opts?: Options) => api<T>('POST', path, body ?? {}, opts)
 export const put = <T,>(path: string, body?: unknown) => api<T>('PUT', path, body ?? {})
 export const del = <T,>(path: string) => api<T>('DELETE', path)

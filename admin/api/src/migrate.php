@@ -4,7 +4,7 @@
 
 declare(strict_types=1);
 
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 function ensure_installed(): void
 {
@@ -170,5 +170,23 @@ function migrate_3(): void
         created_at DATETIME NOT NULL, created_by INT NULL,
         updated_at DATETIME NOT NULL, updated_by INT NULL,
         INDEX (done, due)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+}
+
+/**
+ * Pieces of a backup being restored (see backup.php). They wait here until the
+ * last one has arrived and been checked; then the restore happens in one go.
+ */
+function migrate_4(): void
+{
+    db()->exec("CREATE TABLE IF NOT EXISTS restore_parts (
+        token CHAR(32) NOT NULL,
+        name VARCHAR(64) NOT NULL,
+        seq INT NOT NULL,
+        n INT NOT NULL DEFAULT 0,
+        data LONGTEXT NOT NULL,
+        created_at DATETIME NOT NULL,
+        created_by INT NULL,
+        PRIMARY KEY (token, name, seq)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 }

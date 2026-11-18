@@ -3,7 +3,8 @@ import { useQuery } from '@tanstack/react-query'
 import { get } from '@/lib/api'
 import { todayISO } from '@/lib/format'
 import { useNavigate } from 'react-router'
-import { AlertTriangle, ArrowRightLeft } from 'lucide-react'
+import { AlertTriangle, Upload } from 'lucide-react'
+import { useBackupTools } from '@/components/Backup'
 import { Page } from '@/components/Layout'
 import { DateRangePicker, useDateRange } from '@/components/common'
 import { TrendChart } from '@/components/TrendChart'
@@ -34,23 +35,25 @@ export default function Overview() {
   }, [d, names])
   const lowStock = stock.filter((s) => s.low)
   const firstName = boot?.user.name.split(' ')[0]
-  // Until the old dashboard's data is brought over, owners get a way in from here.
+  // A dashboard with nothing in it is usually a new server: offer to restore a backup.
   const isOwner = boot?.user.role === 'owner'
-  const { data: legacy } = useQuery({ queryKey: ['legacy-status'], queryFn: () => get<{ last: unknown }>('legacy/status'), enabled: isOwner })
-  const offerImport = isOwner && legacy && !legacy.last && d && d.sales_total === 0 && d.expenses === 0
+  const backup = useBackupTools()
+  const empty = d && range.preset === 'all' && d.sales_total === 0 && d.expenses === 0 && d.amazon_orders === 0 && d.stock_total === 0 && d.money_on_hand === 0
+  const offerRestore = isOwner && (empty || backup.busy)
 
   return (
     <Page title="Overview" subtitle={`${greeting()}${firstName ? `, ${firstName}` : ''}.`} toolbar={<DateRangePicker state={range} />}>
+      {isOwner && backup.sheet}
       {isLoading || !d ? (
         <Loading />
       ) : (
         <>
-          {offerImport && (
-            <button type="button" onClick={() => navigate('/settings', { state: { legacyImport: true } })} className="pressable mb-3 flex w-full items-center gap-3 rounded-[1.25rem] bg-surface p-4 text-left shadow-card md:p-5">
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent"><ArrowRightLeft className="size-5" /></span>
+          {offerRestore && (
+            <button type="button" onClick={backup.busy ? undefined : backup.chooseFile} className="pressable mb-3 flex w-full items-center gap-3 rounded-[1.25rem] bg-surface p-4 text-left shadow-card md:p-5">
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent"><Upload className="size-5" /></span>
               <span className="min-w-0 flex-1">
-                <span className="block font-semibold">Bring your data over from the old dashboard</span>
-                <span className="block text-[0.875rem] text-label-2">Sales, expenses, Amazon, GST, stock, balances and to-dos, in one go. You’ll see a preview first.</span>
+                <span className="block font-semibold">Starting again on a new server?</span>
+                <span className="block text-[0.875rem] text-label-2">Restore a backup .zip to bring back every record, login, and the website’s words and photos.</span>
               </span>
             </button>
           )}

@@ -187,21 +187,7 @@ check('Live count sees current visitors', now.visitors, 2)
 const anon = await fetch(base + 'analytics/overview', { headers: {} })
 check('Analytics needs a login', anon.status, 401)
 
-// ---------------------------------------------------------------- backups
-const backup = await ok('GET', 'backup')
-check('Backup includes website history', backup.tables.cms_revisions.length, 1)
-check('Backup leaves out server-only settings', backup.tables.settings.some((r) => r.k === 'schema_version' || r.k === 'analytics_salt'), false)
-const old = { ...backup, version: 1, tables: { ...backup.tables } }
-delete old.tables.cms_revisions
-delete old.tables.cms_draft
-delete old.tables.cms_media
-await ok('POST', 'restore', old)
-check('An older backup (no website tables) restores and keeps the website', (await ok('GET', 'cms')).published?.id, pub.revision)
-check('Schema version survives a restore', (await ok('GET', 'public/health')).schema, 3)
-await ok('POST', 'restore', backup)
-const afterSave = await ok('GET', 'cms')
-await ok('PUT', 'cms/draft', { data: draft1, updated_at: afterSave.draft_updated_at })
-check('Drafts still save after a restore', (await ok('GET', 'cms')).draft?.site?.name, 'Test Co.')
+// Backups (website content and photos included) are tested in backup.test.ts.
 
 console.log(failures ? `\n${failures} FAILED` : '\nAll website tests passed.')
 process.exit(failures ? 1 : 0)

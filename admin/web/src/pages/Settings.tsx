@@ -1,15 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router'
+import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Archive, ArrowRightLeft, BarChart3, Boxes, Download, FileSpreadsheet, HardDrive, MapPin, Moon, RotateCcw, Tags, Upload, UserRound, Wallet, type LucideIcon } from 'lucide-react'
+import { Archive, BarChart3, Boxes, Download, FileSpreadsheet, HardDrive, MapPin, Moon, RotateCcw, Tags, Upload, UserRound, Wallet, type LucideIcon } from 'lucide-react'
+import { useBackupTools } from '@/components/Backup'
 import { Page } from '@/components/Layout'
 import { Sheet } from '@/components/Sheet'
 import { DeleteButton, Editor, FormError, downloadBlob } from '@/components/common'
-import { LegacyImportSheet } from '@/components/LegacyImport'
 import { Badge, Button, Field, Group, Notice, NumberInput, Row, Segmented, Select, TextInput, cx, useConfirm, useToast } from '@/components/ui'
-import { ApiError, del, get, post, put } from '@/lib/api'
+import { del, get, post, put } from '@/lib/api'
 import { useBoot, useNames } from '@/lib/data'
-import { dateTime, qty, todayISO } from '@/lib/format'
+import { qty, todayISO } from '@/lib/format'
 import { everythingWorkbook } from '@/lib/exportAll'
 import { toValues, useRecordForm } from '@/lib/form'
 import { applyTheme, type ThemePref } from '@/lib/theme'
@@ -30,22 +29,12 @@ export default function Settings() {
   const { data: boot } = useBoot()
   const qc = useQueryClient()
   const toast = useToast()
-  const confirm = useConfirm()
   const [list, setList] = useState<(typeof LISTS)[number] | null>(null)
   const [theme, setTheme] = useState<ThemePref>(boot?.user.theme ?? 'system')
-  const fileInput = useRef<HTMLInputElement>(null)
-  const [restoring, setRestoring] = useState(false)
   const [exporting, setExporting] = useState(false)
   const names = useNames()
   const isOwner = boot?.user.role === 'owner'
-  // The Overview's "bring your data over" card opens the import straight away.
-  const location = useLocation()
-  const navigate = useNavigate()
-  const [importing, setImporting] = useState(Boolean((location.state as { legacyImport?: boolean } | null)?.legacyImport))
-  useEffect(() => {
-    if (location.state) navigate('.', { replace: true, state: null })
-  }, [location.state, navigate])
-  const { data: legacy } = useQuery({ queryKey: ['legacy-status'], queryFn: () => get<{ last: { at: string; by: string | null } | null }>('legacy/status'), enabled: isOwner })
+  const backup = useBackupTools()
 
   async function excel() {
     setExporting(true)
@@ -63,42 +52,6 @@ export default function Settings() {
     setTheme(t)
     applyTheme(t)
     put('me', { theme: t }).then(() => qc.invalidateQueries({ queryKey: ['bootstrap'] })).catch(() => {})
-  }
-
-  async function backup() {
-    try {
-      const data = await get('backup')
-      downloadBlob(new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' }), `thanda-kapda-backup-${todayISO()}.json`)
-      toast('Backup downloaded')
-    } catch (e) {
-      toast(e instanceof Error ? e.message : 'Backup failed', 'error')
-    }
-  }
-
-  async function restore(file: File) {
-    let data: unknown
-    try {
-      data = JSON.parse(await file.text())
-    } catch {
-      return toast('That file is not a backup', 'error')
-    }
-    const yes = await confirm({
-      title: 'Replace all current data?',
-      body: 'Everything in the dashboard will be replaced with this backup. Logins are kept. Download a fresh backup first if you’re unsure.',
-      confirm: 'Replace',
-      destructive: true,
-    })
-    if (!yes) return
-    setRestoring(true)
-    try {
-      await post('restore', data)
-      await qc.invalidateQueries()
-      toast('Backup restored')
-    } catch (e) {
-      toast(e instanceof ApiError ? e.message : 'Restore failed', 'error')
-    } finally {
-      setRestoring(false)
-    }
   }
 
   async function signOut() {
@@ -127,31 +80,27 @@ export default function Settings() {
         </div>
         <div>
           <Team isOwner={isOwner} myId={boot?.user.id} />
-          {isOwner && (
-            <Group title="Old dashboard" footer="Brings sales, expenses, Amazon orders, samples, GST, stock, balances, to-dos and the audit trail over from thanda-kapda.netlify.app.">
-              <Row
-                leading={<ArrowRightLeft className="size-5 text-accent" />}
-                title="Move from the old dashboard"
-                subtitle={legacy?.last ? `Last brought over ${dateTime(legacy.last.at)}${legacy.last.by ? ` by ${legacy.last.by}` : ''}` : 'Preview first — nothing changes until you confirm'}
-                onClick={() => setImporting(true)}
-              />
-            </Group>
-          )}
-          <Group title="Backup" footer="A backup is one file with every record. Keep one somewhere safe each month.">
-            <Row leading={<Download className="size-5 text-accent" />} title="Download full backup" onClick={backup} chevron={false} />
+          <Group
+            title="Backup"
+            footer={isOwner
+              ? 'The backup is one .zip file with everything: every record, login and history entry, the website’s words, photos and visitor numbers. Keep a copy somewhere safe (a USB drive or Google Drive) every month. If the server is ever lost, set up the dashboard again and restore it here.'
+              : 'Full backups hold every login, so only owners can make and restore them.'}
+          >
+            {isOwner && (
+              <Row leading={<Download className="size-5 text-accent" />} title="Download full backup" subtitle="Dashboard and website, as a .zip" onClick={backup.busy ? undefined : backup.download} chevron={false} />
+            )}
             <Row leading={<FileSpreadsheet className="size-5 text-accent" />} title={exporting ? 'Preparing…' : 'Download everything as Excel'} subtitle="One sheet per screen, to open in Excel or Google Sheets" onClick={exporting ? undefined : excel} chevron={false} />
             {isOwner && (
-              <Row leading={<Upload className="size-5 text-red" />} title={restoring ? 'Restoring…' : 'Restore from a backup'} subtitle="Replaces all current data" onClick={() => fileInput.current?.click()} chevron={false} />
+              <Row leading={<Upload className="size-5 text-red" />} title="Restore from a backup" subtitle="Replaces everything with a backup .zip" onClick={backup.busy ? undefined : backup.chooseFile} chevron={false} />
             )}
-            <input ref={fileInput} type="file" accept="application/json,.json" hidden onChange={(e) => { if (e.target.files?.[0]) restore(e.target.files[0]); e.target.value = '' }} />
           </Group>
+          {backup.sheet}
           <Group>
             <Row title={<span className="text-red">Sign out</span>} subtitle={boot?.user.email} onClick={signOut} chevron={false} />
           </Group>
         </div>
       </div>
       <ListSheet list={list} onClose={() => setList(null)} />
-      {isOwner && <LegacyImportSheet open={importing} onClose={() => { setImporting(false); qc.invalidateQueries({ queryKey: ['legacy-status'] }) }} />}
     </Page>
   )
 }

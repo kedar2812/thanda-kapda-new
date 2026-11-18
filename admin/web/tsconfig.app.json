@@ -10,8 +10,8 @@
     "strict": true,
     "paths": {
       "@/*": ["./src/*"],
-      "@site/content/*": ["../../src/content/*"],
-      "@site/icons": ["../../src/components/ui/Icons.tsx"],
+      "@site/content/*": ["../../site/src/content/*"],
+      "@site/icons": ["../../site/src/components/ui/Icons.tsx"],
       "react": ["./node_modules/@types/react"],
       "react/*": ["./node_modules/@types/react/*"]
     },
@@ -31,5 +31,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "../../src/content/types.ts", "../../src/content/defaults.ts", "../../src/content/normalize.ts", "../../src/content/schema.ts", "../../src/components/ui/Icons.tsx"]
+  "include": ["src", "../../site/src/content/types.ts", "../../site/src/content/defaults.ts", "../../site/src/content/normalize.ts", "../../site/src/content/schema.ts", "../../site/src/components/ui/Icons.tsx"]
 }

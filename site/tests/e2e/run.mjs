@@ -1,9 +1,9 @@
 // End-to-end: website + dashboard + CMS + analytics in a real browser.
 // Needs, all local (see README, Testing):
 //   API on :8081 (admin/api, php -S ... dev-router.php) on a database with the acceptance-test owner,
-//   the site built with NEXT_PUBLIC_ADMIN_URL=http://127.0.0.1:8081 and served by tests/e2e/serve-site.mjs on :3000,
+//   the site built with NEXT_PUBLIC_ADMIN_URL=http://127.0.0.1:8081 and served by site/tests/e2e/serve-site.mjs on :3000,
 //   the dashboard dev server with VITE_SITE_URL=http://localhost:3000 on :5174.
-//   node tests/e2e/run.mjs <folder for screenshots>
+//   (in site/) node tests/e2e/run.mjs <folder for screenshots>
 import { chromium } from 'playwright'
 import { writeFileSync } from 'node:fs'
 
